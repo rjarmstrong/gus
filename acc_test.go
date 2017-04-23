@@ -13,7 +13,7 @@ var us *Users
 var db *sql.DB
 
 func TestMain(m *testing.M) {
-	db = GetDb(DbOptions{Seed:true})
+	db = GetDb(DbOptions{Seed: true})
 	ps = NewOrgs(db)
 	us = NewUsers(db)
 	code := m.Run()

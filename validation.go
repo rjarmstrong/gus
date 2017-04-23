@@ -25,6 +25,6 @@ func TestStr(input string, rgx ... *regexp.Regexp) bool {
 }
 
 func ValidatePassword(in string) bool {
-	return TestStr(in, Rgx_ValidPasswordChars)  && (TestStr(in, Rgx_OneLower, Rgx_OneNumeric, Rgx_OneUpper, Rgx_PasswordLength) ||
+	return TestStr(in, Rgx_ValidPasswordChars) && (TestStr(in, Rgx_OneLower, Rgx_OneNumeric, Rgx_OneUpper, Rgx_PasswordLength) ||
 		TestStr(in, Rgx_PasswordExtendedLength))
 }

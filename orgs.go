@@ -15,9 +15,9 @@ func NewOrgs(db *sql.DB) *Orgs {
 }
 
 type Org struct {
-	Id int64 `json:"id"`
-	Name string `json:"name"`
-	Type OrgType `json:"type"`
+	Id      int64 `json:"id"`
+	Name    string `json:"name"`
+	Type    OrgType `json:"type"`
 	Updated time.Time `json:"updated"`
 	Created time.Time `json:"created"`
 }
@@ -39,11 +39,11 @@ func (cp CreateOrgParams) Validate() error {
 }
 
 func (us *Orgs) Create(p CreateOrgParams) (*Org, error) {
-	stmt, err := us.db.Prepare("INSERT INTO orgs(name, type, updated, created, deleted) values(?,?, ?,?,?)")
+	stmt, err := us.db.Prepare("INSERT INTO orgs(name, type, updated, created, deleted) values(?,?,?,?,?)")
 	if err != nil {
 		return nil, err
 	}
-	u := &Org{Name: p.Name, Type:p.Type, Created: time.Now(), Updated: time.Now()}
+	u := &Org{Name: p.Name, Type: p.Type, Created: time.Now(), Updated: time.Now()}
 	res, err := stmt.Exec(u.Name, u.Type, u.Updated, u.Created, 0)
 	id, err := res.LastInsertId()
 	if err != nil {

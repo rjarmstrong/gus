@@ -5,7 +5,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 var cprov = CreateOrgParams{Name: "Trainers Inc."}
 
 func TestOrgs_Create(t *testing.T) {

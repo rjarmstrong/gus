@@ -20,10 +20,10 @@ func NewSesMailer() *Mailer {
 }
 
 type MessageParams struct {
-	Subject string
-	Message string
+	Subject   string
+	Message   string
 	FromEmail string
-	ToEmail string
+	ToEmail   string
 }
 
 func (m *Mailer) Send(p MessageParams) error {
@@ -42,25 +42,25 @@ func (m *Mailer) Send(p MessageParams) error {
 				//	Charset: aws.String("Charset"),
 				//},
 				Text: &ses.Content{
-					Data:    aws.String(p.Message), // Required
+					Data: aws.String(p.Message), // Required
 				},
 			},
 			Subject: &ses.Content{ // Required
-				Data:    aws.String(p.Subject), // Required
+				Data: aws.String(p.Subject), // Required
 			},
 		},
-		Source:               aws.String(p.FromEmail), // Required
+		Source: aws.String(p.FromEmail), // Required
 		//ConfigurationSetName: aws.String("ConfigurationSetName"),
 		ReplyToAddresses: []*string{
 			aws.String(p.FromEmail), // Required
 		},
-		ReturnPath:    aws.String(p.FromEmail),
+		ReturnPath: aws.String(p.FromEmail),
 		//ReturnPathArn: aws.String("AmazonResourceName"),
 		//SourceArn:     aws.String("AmazonResourceName"),
 		Tags: []*ses.MessageTag{
 			{ // Required
-				Name:  aws.String("MessageCategory"),  // Required
-				Value: aws.String("Transactional"), // Required
+				Name:  aws.String("MessageCategory"), // Required
+				Value: aws.String("Transactional"),   // Required
 			},
 		},
 	}

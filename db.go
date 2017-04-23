@@ -11,9 +11,9 @@ const (
 )
 
 type DbOptions struct {
-	DriverName     string // Optional will use sqlite3 by default.
-	DataSourceName string // Optional will use './gus.db' by default.
-	Seed           bool // Caution will regenerate schema and delete data.
+	DriverName     string   // Optional will use sqlite3 by default.
+	DataSourceName string   // Optional will use './gus.db' by default.
+	Seed           bool     // Caution will regenerate schema and delete data.
 	SeedSql        []string // Additional DDL or seed data.
 }
 

@@ -3,10 +3,9 @@ package gus
 import "strings"
 
 var (
-	ErrNotAuth = &NotAuthenticatedError{}
+	ErrNotAuth        = &NotAuthenticatedError{}
 	ErrCantDeleteSelf = ErrInvalid("You can't delete yourself.")
 )
-
 
 type NotAuthenticatedError struct {
 }
@@ -26,9 +25,8 @@ func (n *NotFoundError) Error() string {
 	return "Not found"
 }
 
-
 func ErrInvalid(messages ...string) error {
-	return &ValidationError{Messages:messages}
+	return &ValidationError{Messages: messages}
 }
 
 type ValidationError struct {

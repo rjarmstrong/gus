@@ -12,16 +12,16 @@ const (
 )
 
 var (
-	ErrEmailTaken           error = ErrInvalid("That email is taken.")
-	ErrEmailInvalid         error = ErrInvalid("'email' invalid.")
-	ErrEmailRequired         error = ErrInvalid("'email' required.")
-	ErrPasswordRequired         error = ErrInvalid("'password' required.")
-	ErrInvalidResetToken    error = ErrInvalid("Invalid reset token.")
-	ErrPasswordInvalid error = ErrInvalid(
+	ErrEmailTaken        error = ErrInvalid("That email is taken.")
+	ErrEmailInvalid      error = ErrInvalid("'email' invalid.")
+	ErrEmailRequired     error = ErrInvalid("'email' required.")
+	ErrPasswordRequired  error = ErrInvalid("'password' required.")
+	ErrInvalidResetToken error = ErrInvalid("Invalid reset token.")
+	ErrPasswordInvalid   error = ErrInvalid(
 		"'new_password' must contain: 1 Upper, 1 Lower, 1 Number and 8 Chars",
 		"OR any alphanumeric with a minimum of 15 chars.")
 	ResetTokenExpirySeconds int64
-	ResetTokenExpiryKey                     = "RESET_TOKEN_EXPIRY"
+	ResetTokenExpiryKey     = "RESET_TOKEN_EXPIRY"
 )
 
 func NewUsers(db *sql.DB) *Users {
@@ -287,7 +287,7 @@ func (us *Users) ChangePassword(p ChangePasswordParams) error {
 		stmt, err := us.db.Prepare(
 			"SELECT reset_token FROM password_resets where email = ? and created > ? and deleted = 0 " +
 				"ORDER BY created DESC LIMIT 1")
-		exp := time.Now().Add(-time.Second*time.Duration(ResetTokenExpirySeconds))
+		exp := time.Now().Add(-time.Second * time.Duration(ResetTokenExpirySeconds))
 		row := stmt.QueryRow(p.Email, exp)
 		var resetToken string
 		err = CheckNotFound(row.Scan(&resetToken))

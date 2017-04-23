@@ -31,7 +31,7 @@ func TestUsers_Update(t *testing.T) {
 	Seed(db)
 	u, _, err := us.Create(cp)
 	ErrIf(t, err)
-	up := UpdateUserParams{Id: u.Id, Email:"donkey@kong.com", FirstName:"Donkey", LastName:"Kong", Phone : "0345345"}
+	up := UpdateUserParams{Id: u.Id, Email: "donkey@kong.com", FirstName: "Donkey", LastName: "Kong", Phone: "0345345"}
 	err = us.Update(up)
 	ErrIf(t, err)
 	u, _ = us.Get(u.Id)
