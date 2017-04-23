@@ -37,12 +37,12 @@ func NewCreateUserParams() CreateUserParams {
 }
 
 type CreateUserParams struct {
-	Email      string `json:"email"`
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	Phone      string `json:"phone"`
-	ProviderId int64 `json:"org_id"`
-	Role       Role `json:"role"`
+	Email     string `json:"email"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Phone     string `json:"phone"`
+	OrgId     int64 `json:"org_id"`
+	Role      Role `json:"role"`
 }
 
 func (cp *CreateUserParams) Validate() error {
@@ -66,7 +66,7 @@ func (us *Users) Create(p CreateUserParams) (*User, string, error) {
 		return nil, "", err
 	}
 	u := &User{Email: p.Email, FirstName: p.FirstName, LastName: p.LastName, Phone: p.Phone,
-		OrgId:    p.ProviderId, Created: time.Now(), Updated: time.Now(), Role: p.Role}
+		OrgId:    p.OrgId, Created: time.Now(), Updated: time.Now(), Role: p.Role}
 
 	password := RandStringBytesMask(15)
 	hash, err := hashPassword(password)
@@ -192,7 +192,7 @@ func (us *Users) Delete(id int64) error {
 }
 
 type ListUsersParams struct {
-	ProviderId int
+	OrgId int
 }
 
 func (pm *ListUsersParams) Validate() error {

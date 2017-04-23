@@ -5,7 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var cp = CreateUserParams{Email: "richard.armstrong@gimanzo.com", ProviderId: 1}
+var cp = CreateUserParams{Email: "richard.armstrong@gimanzo.com", OrgId: 1}
 
 func TestUsers_Create(t *testing.T) {
 	u, _, err := us.Create(cp)
