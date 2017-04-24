@@ -60,6 +60,7 @@ func hashPassword(password string) (string, error) {
 	return string(hash), nil
 }
 
+// Create returns a user, temp password and [error]
 func (us *Users) Create(p CreateUserParams) (*User, string, error) {
 	stmt, err := us.db.Prepare("INSERT INTO users(email, first_name, last_name, phone, password_hash, org_id, updated, created, deleted, role) values(?,?,?,?,?,?,?,?, ?, ?)")
 	if err != nil {

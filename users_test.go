@@ -14,20 +14,20 @@ func TestUsers_Create(t *testing.T) {
 	assert.True(t, u.Id > 0)
 
 	// Should not allow create for existing email
-	u, _, err = us.Create(cp)
+	_, _, err = us.Create(cp)
 	assert.Error(t, err)
-}
 
-func TestUsers_Get(t *testing.T) {
-	Seed(db)
-	u, _, err := us.Create(cp)
-	ErrIf(t, err)
+	// Get
 	u, err = us.Get(u.Id)
 	ErrIf(t, err)
 	assert.Equal(t, u.Email, cp.Email)
+
+	// List
 	users, err := us.List(ListUsersParams{OrgId:1})
 	ErrIf(t, err)
 	assert.Equal(t, 1, len(users))
+	assert.Equal(t, int64(1), users[0].Id)
+	assert.Equal(t, cp.Email, users[0].Email)
 }
 
 func TestUsers_Update(t *testing.T) {
