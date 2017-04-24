@@ -25,6 +25,9 @@ func TestUsers_Get(t *testing.T) {
 	u, err = us.Get(u.Id)
 	ErrIf(t, err)
 	assert.Equal(t, u.Email, cp.Email)
+	users, err := us.List(ListUsersParams{OrgId:1})
+	ErrIf(t, err)
+	assert.Equal(t, 1, len(users))
 }
 
 func TestUsers_Update(t *testing.T) {

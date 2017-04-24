@@ -200,12 +200,20 @@ func (pm *ListUsersParams) Validate() error {
 }
 
 func (us *Users) List(p ListUsersParams) ([]*User, error) {
-	stmt, err := us.db.Prepare("SELECT id, email, first_name, last_name, phone, org_id, created, updated, role from users WHERE deleted = 0 ORDER by updated DESC")
+	q := "SELECT id, email, first_name, last_name, phone, org_id, created, updated, role from users WHERE deleted = 0"
+	args := []interface{}{}
+	if p.OrgId > 0 {
+		q += " AND org_id = ?"
+		args = append(args, p.OrgId)
+
+	}
+	q += " ORDER by updated DESC"
+	stmt, err := us.db.Prepare(q)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	rows, err := stmt.Query()
+	rows, err := stmt.Query(args...)
 	if err != nil {
 		return nil, err
 	}
