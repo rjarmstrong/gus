@@ -5,27 +5,28 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var cprov = CreateOrgParams{Name: "Trainers Inc."}
+var corg = CreateOrgParams{Name: "Trainers Inc."}
 
 func TestOrgs_Create(t *testing.T) {
-	u, err := ps.Create(cprov)
+	u, err := ps.Create(corg)
 	ErrIf(t, err)
-	assert.Equal(t, u.Name, cprov.Name)
+	assert.Equal(t, u.Name, corg.Name)
 	assert.True(t, u.Id > 0)
-}
 
-func TestOrgs_Get(t *testing.T) {
-	Seed(db)
-	u, err := ps.Create(cprov)
-	ErrIf(t, err)
+	// Get
 	u, err = ps.Get(u.Id)
 	ErrIf(t, err)
-	assert.Equal(t, u.Name, cprov.Name)
+	assert.Equal(t, u.Name, corg.Name)
+
+	orgs, err := ps.List(ListOrgsParams{})
+	ErrIf(t, err)
+	assert.Equal(t, 1, len(orgs))
+	assert.Equal(t, corg.Name, orgs[0].Name)
 }
 
 func TestOrgs_Update(t *testing.T) {
 	Seed(db)
-	u, err := ps.Create(cprov)
+	u, err := ps.Create(corg)
 	ErrIf(t, err)
 	up := UpdateOrgParams{Id: u.Id, Name: "New Name"}
 	err = ps.Update(up)
@@ -41,7 +42,7 @@ func TestOrgs_Update(t *testing.T) {
 
 func TestOrgs_Delete(t *testing.T) {
 	Seed(db)
-	u, err := ps.Create(cprov)
+	u, err := ps.Create(corg)
 	ErrIf(t, err)
 	err = ps.Delete(u.Id)
 	ErrIf(t, err)

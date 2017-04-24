@@ -117,14 +117,14 @@ func (us *Orgs) List(p ListOrgsParams) ([]*Org, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	orgs := []*Org{}
+	ogs := []*Org{}
 	for rows.Next() {
 		u := &Org{}
-		rows.Scan(&u.Id, &u.Name, &u.Created, &u.Updated)
-		orgs = append(orgs, u)
+		rows.Scan(&u.Id, &u.Name, &u.Type, &u.Created, &u.Updated)
+		ogs = append(ogs, u)
 	}
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	return orgs, nil
+	return ogs, nil
 }
