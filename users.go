@@ -192,7 +192,7 @@ func (us *Users) Delete(id int64) error {
 }
 
 type ListUsersParams struct {
-	OrgId int
+	OrgId int64 `json:"org_id"`
 }
 
 func (pm *ListUsersParams) Validate() error {
