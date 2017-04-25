@@ -1,6 +1,6 @@
 # Gus
 
-<img alt="gus" src="http://imgur.com/yGQHEER" width="100" height="100" />
+<img alt="gus" src="http://imgur.com/yGQHEER.jpg" width="100" height="100" />
 
 A simple user authentication and account management library with go/sql compatible implementations.
 
@@ -18,7 +18,7 @@ Features
 * Local user authentication
     * Sign-up, Sign-in
     * Change and reset password
-    * Locking with Rate limit locking
+    * PLANNED: Locking with Rate limit locking
 * User management
 * Basic Organisation management
     
