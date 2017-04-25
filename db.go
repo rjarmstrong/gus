@@ -96,7 +96,7 @@ func (p *ListArgs) ApplyDefaults() {
 	}
 }
 
-var sqlCheck = regexp.MustCompile("^[A-Za-z]+$")
+var sqlCheck = regexp.MustCompile("^[A-Za-z.]+$")
 var sqlErr = ErrInvalid("Invalid order params.")
 
 // GetRows returns a *sql.Rows iterator after adding limit and offset, results are sorted by default 'updated' desc.
