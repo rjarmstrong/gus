@@ -7,7 +7,9 @@ import (
 )
 
 const (
-	ERR_STRING_NO_ROWS = "sql: no rows in result set"
+	ERR_STRING_NO_ROWS         = "sql: no rows in result set"
+	SortDirAsc         SortDir = "ASC"
+	SortDirDesc        SortDir = "DESC"
 )
 
 type DbOptions struct {
@@ -66,11 +68,13 @@ func CheckUpdated(res sql.Result, err error) error {
 	return nil
 }
 
+type SortDir string
 
 type ListParams struct {
-	Size int `json:"size"`
-	Page int `json:"page"`
-	SortBy string `json:"sort_by"`
+	Size    int `json:"size"`
+	Page    int `json:"page"`
+	SortBy  string `json:"sort_by"`
+	SortDir SortDir `json:"direction"`
 }
 
 func (p *ListParams) ApplyDefaults(){
@@ -80,13 +84,16 @@ func (p *ListParams) ApplyDefaults(){
 	if p.SortBy == "" {
 		p.SortBy = "updated"
 	}
+	if string(p.SortDir) == "" {
+		p.SortDir = SortDirDesc
+	}
 }
 
 // GetRows returns a *sql.Rows iterator after adding limit and offset, results are sorted by default 'updated' desc.
 // Sql added sample: + ' ORDER by updated DESC LIMIT 20 OFFSET 1'
 func GetRows(db *sql.DB, query string, lp ListParams, args ...interface{}) (*sql.Rows, error) {
 	lp.ApplyDefaults()
-	query += fmt.Sprintf(" ORDER by %s DESC", lp.SortBy)
+	query += fmt.Sprintf(" ORDER by %s %s", lp.SortBy, lp.SortDir)
 	query += fmt.Sprintf(" LIMIT %d OFFSET %d", lp.Size, lp.Page*lp.Size)
 	stmt, err := db.Prepare(query)
 	if err != nil {
