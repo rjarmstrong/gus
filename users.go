@@ -194,7 +194,7 @@ func (us *Users) Delete(id int64) error {
 
 type ListUsersParams struct {
 	OrgId int64 `json:"org_id"`
-	ListParams
+	ListArgs
 }
 
 func (pm *ListUsersParams) Validate() error {
@@ -208,7 +208,10 @@ func (us *Users) List(p ListUsersParams) ([]*User, error) {
 		q += " AND org_id = ?"
 		args = append(args, p.OrgId)
 	}
-	rows, err := GetRows(us.db, q, p.ListParams, args...)
+	rows, err := GetRows(us.db, q, p.ListArgs, args...)
+	if err != nil {
+		return nil, err
+	}
 	users := []*User{}
 	for rows.Next() {
 		u := &User{}

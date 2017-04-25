@@ -100,7 +100,7 @@ func (us *Orgs) Delete(id int64) error {
 }
 
 type ListOrgsParams struct {
-	ListParams
+	ListArgs
 }
 
 func (pm *ListOrgsParams) Validate() error {
@@ -109,7 +109,7 @@ func (pm *ListOrgsParams) Validate() error {
 
 func (us *Orgs) List(p ListOrgsParams) ([]*Org, error) {
 	q := "SELECT id, name, type, created, updated from orgs WHERE deleted = 0"
-	rows, err := GetRows(us.db, q, p.ListParams)
+	rows, err := GetRows(us.db, q, p.ListArgs)
 	if err != nil {
 		return nil, err
 	}

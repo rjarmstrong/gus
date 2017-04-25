@@ -37,14 +37,30 @@ func TestUsers_Create(t *testing.T) {
 		i--
 	}
 	users, err = us.List(ListUsersParams{
-		ListParams: ListParams{Size:3},
+		ListArgs: ListArgs{Size: 3},
 	})
 	assert.Equal(t, 3, len(users))
+
+	// 2nd Page shorter than size
 	users, err = us.List(ListUsersParams{
-		ListParams: ListParams{Size:2, Page:1},
+		ListArgs: ListArgs{Size: 4, Page: 1, OrderBy: "id", Direction: DirectionAsc},
 	})
 	ErrIf(t, err)
 	assert.Equal(t, 2, len(users))
+
+	// Order by id desc
+	users, err = us.List(ListUsersParams{
+		ListArgs: ListArgs{Size: 20, Page: 0, OrderBy: "id", Direction: DirectionDesc},
+	})
+	ErrIf(t, err)
+	assert.Equal(t, int64(6), users[0].Id)
+
+	// Order by id asc
+	users, err = us.List(ListUsersParams{
+		ListArgs: ListArgs{Size: 20, Page: 0, OrderBy: "id", Direction: DirectionAsc},
+	})
+	ErrIf(t, err)
+	assert.Equal(t, int64(1), users[0].Id)
 }
 
 func TestUsers_Update(t *testing.T) {

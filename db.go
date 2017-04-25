@@ -4,13 +4,14 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"regexp"
 )
 
 const (
 	ERR_STRING_NO_ROWS                = "sql: no rows in result set"
 	ERR_STRING_NO_SUCH_COLUMN         = "sql: no such column"
-	SortDirAsc                SortDir = "ASC"
-	SortDirDesc               SortDir = "DESC"
+	DirectionAsc              SortDir = "ASC"
+	DirectionDesc             SortDir = "DESC"
 )
 
 type DbOptions struct {
@@ -73,39 +74,41 @@ func CheckUpdated(res sql.Result, err error) error {
 
 type SortDir string
 
-type ListParams struct {
-	Size    int `json:"size"`
-	Page    int `json:"page"`
-	SortBy  string `json:"sort_by"`
-	SortDir SortDir `json:"direction"`
+type ListArgs struct {
+	Size      int `json:"size"`          // Page size
+	Page      int `json:"page"`          // Zero-indexed page
+	OrderBy   string `json:"sort_by"`    // Order by comma separated columns
+	Direction SortDir `json:"direction"` // ASC or DESC
 }
 
-func (p *ListParams) ApplyDefaults(){
+func (p *ListArgs) ApplyDefaults() {
 	if p.Size < 1 {
 		p.Size = 20
 	}
 	if p.Page < 0 {
 		p.Page = 0
 	}
-	if p.SortBy == "" {
-		p.SortBy = "updated"
+	if p.OrderBy == "" {
+		p.OrderBy = "updated"
 	}
-	if string(p.SortDir) == "" {
-		p.SortDir = SortDirDesc
+	if string(p.Direction) == "" {
+		p.Direction = DirectionDesc
 	}
 }
 
+var sqlCheck = regexp.MustCompile("^[A-Za-z]+$")
+var sqlErr = ErrInvalid("Invalid order params.")
+
 // GetRows returns a *sql.Rows iterator after adding limit and offset, results are sorted by default 'updated' desc.
 // Sql added sample: + ' ORDER by updated DESC LIMIT 20 OFFSET 1'
-func GetRows(db *sql.DB, query string, lp ListParams, args ...interface{}) (*sql.Rows, error) {
+func GetRows(db *sql.DB, query string, lp ListArgs, args ...interface{}) (*sql.Rows, error) {
 	lp.ApplyDefaults()
-	if lp.SortDir == SortDirAsc {
-		query += " ORDER by ? ASC LIMIT ? OFFSET ?"
-	} else {
-		query += " ORDER by ? DESC LIMIT ? OFFSET ?"
+	if !sqlCheck.MatchString(lp.OrderBy) || !sqlCheck.MatchString(string(lp.Direction)) {
+		return nil, sqlErr
 	}
-	args = append(args, lp.SortBy, lp.Size, lp.Page*lp.Size)
-	Debug("LIST:", query, args, lp.SortDir)
+	query += fmt.Sprintf(" ORDER BY %s %s LIMIT ? OFFSET ?", lp.OrderBy, lp.Direction)
+	args = append(args, lp.Size, lp.Page*lp.Size)
+	Debug("LIST:", query, args, lp.Direction)
 	stmt, err := db.Prepare(query)
 	if err != nil {
 		if err.Error() == ERR_STRING_NO_SUCH_COLUMN {
