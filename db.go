@@ -7,9 +7,10 @@ import (
 )
 
 const (
-	ERR_STRING_NO_ROWS         = "sql: no rows in result set"
-	SortDirAsc         SortDir = "ASC"
-	SortDirDesc        SortDir = "DESC"
+	ERR_STRING_NO_ROWS                = "sql: no rows in result set"
+	ERR_STRING_NO_SUCH_COLUMN         = "sql: no such column"
+	SortDirAsc                SortDir = "ASC"
+	SortDirDesc               SortDir = "DESC"
 )
 
 type DbOptions struct {
@@ -19,6 +20,7 @@ type DbOptions struct {
 	SeedSql        []string // Additional DDL or seed data.
 }
 
+// Gets the sql database handle for the database specified in the DriverName options parameter.
 func GetDb(o DbOptions) *sql.DB {
 	if o.DriverName == "" {
 		o.DriverName = "sqlite3"
@@ -39,6 +41,7 @@ func GetDb(o DbOptions) *sql.DB {
 	return db
 }
 
+// Seed executes sql prior to app start. Not to be exposed to client apis.
 func Seed(db *sql.DB, xtraSeedSql ...string) error {
 	_, err := db.Exec(fmt.Sprintf("%s\n%s", DDL, strings.Join(xtraSeedSql, "\n")))
 	if err != nil {
@@ -81,6 +84,9 @@ func (p *ListParams) ApplyDefaults(){
 	if p.Size < 1 {
 		p.Size = 20
 	}
+	if p.Page < 0 {
+		p.Page = 0
+	}
 	if p.SortBy == "" {
 		p.SortBy = "updated"
 	}
@@ -93,10 +99,18 @@ func (p *ListParams) ApplyDefaults(){
 // Sql added sample: + ' ORDER by updated DESC LIMIT 20 OFFSET 1'
 func GetRows(db *sql.DB, query string, lp ListParams, args ...interface{}) (*sql.Rows, error) {
 	lp.ApplyDefaults()
-	query += fmt.Sprintf(" ORDER by %s %s", lp.SortBy, lp.SortDir)
-	query += fmt.Sprintf(" LIMIT %d OFFSET %d", lp.Size, lp.Page*lp.Size)
+	if lp.SortDir == SortDirAsc {
+		query += " ORDER by ? ASC LIMIT ? OFFSET ?"
+	} else {
+		query += " ORDER by ? DESC LIMIT ? OFFSET ?"
+	}
+	args = append(args, lp.SortBy, lp.Size, lp.Page*lp.Size)
+	Debug("LIST:", query, args, lp.SortDir)
 	stmt, err := db.Prepare(query)
 	if err != nil {
+		if err.Error() == ERR_STRING_NO_SUCH_COLUMN {
+			return nil, ErrInvalid(fmt.Sprintf(err.Error()))
+		}
 		return nil, err
 	}
 	defer stmt.Close()
