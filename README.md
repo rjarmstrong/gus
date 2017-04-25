@@ -1,4 +1,4 @@
-<img alt="gus" src="http://imgur.com/yGQHEER.jpg" width="200" height="200" />
+<img alt="gus" src="http://imgur.com/UUpaKM4.jpg" />
 
 Gus  
 ========
@@ -12,7 +12,7 @@ Benefits
 * Ideal for lightweight applications
 * Can use default sqlite3 driver without setting up a database
 * Low resource requirements
-* Easily compose in an existing application or extend to add additional functionality.
+* Easily compose in an existing application or extend to add additional functionality
 
 
 Features
@@ -27,9 +27,11 @@ Features
 
 Get started
 ========
-` go get github.com/kwk-super-snippets/gus `
-
+```bash
+go get github.com/kwk-super-snippets/gus 
 ```
+
+```go
  // Min config
  o := gus.DbOptions{DataSourceName: "./my.db", Seed: true}
  db = gus.GetDb(o)
