@@ -25,7 +25,6 @@ func TestOrgs_Create(t *testing.T) {
 }
 
 func TestOrgs_Update(t *testing.T) {
-	Seed(db)
 	u, err := ps.Create(corg)
 	ErrIf(t, err)
 	up := UpdateOrgParams{Id: u.Id, Name: "New Name"}
@@ -41,7 +40,6 @@ func TestOrgs_Update(t *testing.T) {
 }
 
 func TestOrgs_Delete(t *testing.T) {
-	Seed(db)
 	u, err := ps.Create(corg)
 	ErrIf(t, err)
 	err = ps.Delete(u.Id)

@@ -3,9 +3,10 @@ package gus
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
+	"fmt"
 )
 
-var cp = CreateUserParams{Email: "richard.armstrong@gimanzo.com", OrgId: 1}
+var cp = CreateUserParams{Email: "user@mail.com", OrgId: 1}
 
 func TestUsers_Create(t *testing.T) {
 	u, _, err := us.Create(cp)
@@ -28,10 +29,26 @@ func TestUsers_Create(t *testing.T) {
 	assert.Equal(t, 1, len(users))
 	assert.Equal(t, int64(1), users[0].Id)
 	assert.Equal(t, cp.Email, users[0].Email)
+
+	i := 5
+	for i > 0 {
+		u, _, err = us.Create(CreateUserParams{Email:fmt.Sprintf("%d@mail.com", i) })
+		ErrIf(t, err)
+		i--
+	}
+	users, err = us.List(ListUsersParams{
+		ListParams: ListParams{Size:3},
+	})
+	assert.Equal(t, 3, len(users))
+	users, err = us.List(ListUsersParams{
+		ListParams: ListParams{Size:2, Page:1},
+	})
+	ErrIf(t, err)
+	assert.Equal(t, 2, len(users))
 }
 
 func TestUsers_Update(t *testing.T) {
-	Seed(db)
+	cp.Email = "update@mail.com"
 	u, _, err := us.Create(cp)
 	ErrIf(t, err)
 	up := UpdateUserParams{Id: u.Id, Email: "donkey@kong.com", FirstName: "Donkey", LastName: "Kong", Phone: "0345345"}
@@ -56,7 +73,7 @@ func TestUsers_Update(t *testing.T) {
 }
 
 func TestUsers_Delete(t *testing.T) {
-	Seed(db)
+	cp.Email = "delete@mail.com"
 	u, _, err := us.Create(cp)
 	ErrIf(t, err)
 	err = us.Delete(u.Id)

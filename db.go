@@ -66,6 +66,36 @@ func CheckUpdated(res sql.Result, err error) error {
 	return nil
 }
 
+
+type ListParams struct {
+	Size int `json:"size"`
+	Page int `json:"page"`
+}
+
+func (p *ListParams) ApplyDefaults(){
+	if p.Size < 1 {
+		p.Size = 20
+	}
+}
+
+// GetRows returns a *sql.Rows iterator after adding limit and offset, results are sorted by default 'updated' desc.
+// Sql added sample: + ' ORDER by updated DESC LIMIT 20 OFFSET 1'
+func GetRows(db *sql.DB, query string, lp ListParams, args ...interface{}) (*sql.Rows, error) {
+	lp.ApplyDefaults()
+	query += " ORDER by updated DESC"
+	query += fmt.Sprintf(" LIMIT %d OFFSET %d", lp.Size, lp.Page*lp.Size)
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	rows, err := stmt.Query(args...)
+	if err != nil {
+		return nil, err
+	}
+	return rows, err
+}
+
 const DDL = `
 DROP TABLE IF EXISTS users;
 
