@@ -70,11 +70,15 @@ func CheckUpdated(res sql.Result, err error) error {
 type ListParams struct {
 	Size int `json:"size"`
 	Page int `json:"page"`
+	SortBy string `json:"sort_by"`
 }
 
 func (p *ListParams) ApplyDefaults(){
 	if p.Size < 1 {
 		p.Size = 20
+	}
+	if p.SortBy == "" {
+		p.SortBy = "updated"
 	}
 }
 
@@ -82,7 +86,7 @@ func (p *ListParams) ApplyDefaults(){
 // Sql added sample: + ' ORDER by updated DESC LIMIT 20 OFFSET 1'
 func GetRows(db *sql.DB, query string, lp ListParams, args ...interface{}) (*sql.Rows, error) {
 	lp.ApplyDefaults()
-	query += " ORDER by updated DESC"
+	query += fmt.Sprintf(" ORDER by %s DESC", lp.SortBy)
 	query += fmt.Sprintf(" LIMIT %d OFFSET %d", lp.Size, lp.Page*lp.Size)
 	stmt, err := db.Prepare(query)
 	if err != nil {
