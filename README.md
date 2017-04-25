@@ -1,4 +1,4 @@
-<img alt="gus" src="http://imgur.com/UUpaKM4.jpg" />
+<img alt="gus" src="http://imgur.com/UUpaKM4.jpg" height="220" />
 
 Gus  
 ========
