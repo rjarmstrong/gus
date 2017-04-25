@@ -1,6 +1,6 @@
 <img alt="gus" src="http://imgur.com/UUpaKM4.jpg" height="220" />
 
-Gus  
+gus  
 ========
 
 A simple user authentication and account management library with go/sql compatible implementations.
