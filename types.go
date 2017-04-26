@@ -3,6 +3,7 @@ package gus
 import (
 	"math/rand"
 	"time"
+	"encoding/json"
 )
 
 const (
@@ -40,4 +41,13 @@ func RandStringBytesMask(length int) string {
 		}
 	}
 	return string(b)
+}
+
+func ApplyUpdates(existing interface{}, params interface{}) error {
+	p, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+	json.Unmarshal(p, existing)
+	return nil
 }
