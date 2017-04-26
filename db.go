@@ -83,7 +83,7 @@ type ListArgs struct {
 
 func (p *ListArgs) ApplyDefaults() {
 	if p.Size < 1 {
-		p.Size = 20
+		p.Size = 100
 	}
 	if p.Page < 0 {
 		p.Page = 0
