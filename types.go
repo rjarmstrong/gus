@@ -43,11 +43,14 @@ func RandStringBytesMask(length int) string {
 	return string(b)
 }
 
-func ApplyUpdates(existing interface{}, params interface{}) error {
-	p, err := json.Marshal(params)
+// ApplyUpdates will apply updates to an 'original' struct and update fields based on an 'updates' struct
+// The 'updates' struct should have point fields and should also serialize to and from json the same as the
+// Intended destination fields.
+func ApplyUpdates(original interface{}, updates interface{}) error {
+	p, err := json.Marshal(updates)
 	if err != nil {
 		return err
 	}
-	json.Unmarshal(p, existing)
+	json.Unmarshal(p, original)
 	return nil
 }

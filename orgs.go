@@ -68,23 +68,28 @@ func (us *Orgs) Get(id int64) (*Org, error) {
 }
 
 type UpdateOrgParams struct {
-	Id   int64 `json:"id"`
-	Name string `json:"name"`
+	Id   *int64 `json:"id"`
+	Name *string `json:"name"`
 }
 
 func (up *UpdateOrgParams) Validate() error {
-	if govalidator.IsNull(up.Name) {
+	if govalidator.IsNull(*up.Name) {
 		return ErrInvalid("'name' required.")
 	}
 	return nil
 }
 
-func (us *Orgs) Update(u UpdateOrgParams) error {
+func (us *Orgs) Update(p UpdateOrgParams) error {
+	o, err := us.Get(*p.Id)
+	if err != nil {
+		return err
+	}
+	ApplyUpdates(o, p)
 	stmt, err := us.db.Prepare("UPDATE orgs SET name = ?, updated = ? WHERE id = ? AND deleted = 0")
 	if err != nil {
 		return err
 	}
-	err = CheckUpdated(stmt.Exec(u.Name, time.Now(), u.Id))
+	err = CheckUpdated(stmt.Exec(o.Name, time.Now(), o.Id))
 	if err != nil {
 		return err
 	}

@@ -27,14 +27,16 @@ func TestOrgs_Create(t *testing.T) {
 func TestOrgs_Update(t *testing.T) {
 	u, err := ps.Create(corg)
 	ErrIf(t, err)
-	up := UpdateOrgParams{Id: u.Id, Name: "New Name"}
+	name := "New Name"
+	up := UpdateOrgParams{Id: &u.Id, Name: &name}
 	err = ps.Update(up)
 	ErrIf(t, err)
 	u, _ = ps.Get(u.Id)
-	assert.Equal(t, up.Name, u.Name)
+	assert.Equal(t, *up.Name, u.Name)
 
 	// Should not allow update of non-existing record
-	up.Id = 33453453
+	id := int64(33453453)
+	up.Id = &id
 	err = ps.Update(up)
 	assert.Error(t, err)
 }

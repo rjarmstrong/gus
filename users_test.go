@@ -67,23 +67,28 @@ func TestUsers_Update(t *testing.T) {
 	cp.Email = "update@mail.com"
 	u, _, err := us.Create(cp)
 	ErrIf(t, err)
-	up := UpdateUserParams{Id: u.Id, Email: "donkey@kong.com", FirstName: "Donkey", LastName: "Kong", Phone: "0345345"}
+	email := "donkey@kong.com"
+	fname := "Donkey"
+	phone := "0345345"
+	up := UpdateUserParams{Id: &u.Id, Email: &email, FirstName: &fname, Phone: &phone}
 	err = us.Update(up)
 	ErrIf(t, err)
 	u, _ = us.Get(u.Id)
-	assert.Equal(t, up.Email, u.Email)
-	assert.Equal(t, up.FirstName, u.FirstName)
-	assert.Equal(t, up.LastName, u.LastName)
-	assert.Equal(t, up.Phone, u.Phone)
+	assert.Equal(t, *up.Email, u.Email)
+	assert.Equal(t, *up.FirstName, u.FirstName)
+	assert.Equal(t, *up.Phone, u.Phone)
+	// untouched
+	assert.Equal(t, cp.LastName, u.LastName)
 
 	// Should not update to existing email
 	u, _, err = us.Create(cp)
-	up.Id = u.Id
+	up.Id = &u.Id
 	err = us.Update(up)
 	assert.Error(t, err)
 
 	// Should not allow update of non-existing record
-	up.Id = 33453453
+	id := int64(33453453)
+	up.Id = &id
 	err = us.Update(up)
 	assert.Error(t, err)
 }

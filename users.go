@@ -157,22 +157,27 @@ func (us *Users) Authenticate(p SignInParams) (*User, error) {
 }
 
 type UpdateUserParams struct {
-	Id        int64 `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Email     string `json:"email"`
-	Phone     string `json:"phone"`
-	Role      Role `json:"role"`
+	Id        *int64 `json:"id"`
+	FirstName *string `json:"first_name"`
+	LastName  *string `json:"last_name"`
+	Email     *string `json:"email"`
+	Phone     *string `json:"phone"`
+	Role      *Role `json:"role"`
 }
 
 func (up *UpdateUserParams) Validate() error {
-	if up.Email != "" && !govalidator.IsEmail(up.Email) {
+	if *up.Email != "" && !govalidator.IsEmail(*up.Email) {
 		return ErrInvalid("'email' invalid.")
 	}
 	return nil
 }
 
-func (us *Users) Update(u UpdateUserParams) error {
+func (us *Users) Update(p UpdateUserParams) error {
+	u, err := us.Get(*p.Id)
+	if err != nil {
+		return err
+	}
+	ApplyUpdates(u, p)
 	stmt, err := us.db.Prepare("UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ?, updated = ? WHERE id = ? AND deleted = 0")
 	if err != nil {
 		return err
