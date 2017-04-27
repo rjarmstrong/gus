@@ -154,7 +154,6 @@ func (us *Users) GetByEmail(email string) (*UserWithClaims, string, error) {
 
 func (us *Users) Authenticate(p SignInParams) (*UserWithClaims, error) {
 	u, hash, err := us.GetByEmail(p.Email)
-	Debug(fmt.Sprintf("CLAIMS: %+v", *u.Claims))
 	if err != nil {
 		_, ok := err.(*NotFoundError)
 		if ok {
@@ -162,6 +161,7 @@ func (us *Users) Authenticate(p SignInParams) (*UserWithClaims, error) {
 		}
 		return nil, err
 	}
+	Debug(fmt.Sprintf("CLAIMS: %+v", *u.Claims))
 	if u.Suspended || u.OrgSuspended {
 		return nil, ErrNotAuth
 	}
