@@ -15,6 +15,16 @@ func (n *NotAuthenticatedError) Error() string {
 	return "Not Authenticated"
 }
 
+type RateLimitExceededError struct {
+	Messages []string `json:"messages"`
+}
+
+func (rl *RateLimitExceededError) Error() string {
+	return "- " + strings.Join(rl.Messages, "\n- ")
+}
+
+
+
 func ErrNotFound() error {
 	return &NotFoundError{}
 }

@@ -167,7 +167,7 @@ func (us *Users) GetByEmail(email string) (*UserWithClaims, string, error) {
 
 func (us *Users) Authenticate(p SignInParams) (*UserWithClaims, error) {
 	if us.isLocked(p.Email) {
-		return nil, ErrNotAuth
+		return nil, RateLimitExceededError{Messages: []string("Too many sign-in attempts try again later.")}
 	}
 	u, hash, err := us.GetByEmail(p.Email)
 	if err != nil {
