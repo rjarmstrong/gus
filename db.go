@@ -23,7 +23,7 @@ type DbOpts struct {
 }
 
 // Gets the sql database handle for the database specified in the DriverName options parameter.
-func GetDb(o DbOpts) *sql.DB {
+func GetDb(o DbOpts) (*sql.DB, error) {
 	if o.DriverName == "" {
 		o.DriverName = "sqlite3"
 	}
@@ -32,15 +32,15 @@ func GetDb(o DbOpts) *sql.DB {
 	}
 	db, err := sql.Open(o.DriverName, o.DataSourceName)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if o.Seed {
 		err := Seed(db, o.SeedSql...)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
-	return db
+	return db, nil
 }
 
 // Seed executes sql prior to app start. Not to be exposed to client apis.

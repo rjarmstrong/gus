@@ -14,7 +14,10 @@ var us *Users
 var db *sql.DB
 
 func TestMain(m *testing.M) {
-	db = GetDb(DbOpts{Seed: true})
+	db, err := GetDb(DbOpts{Seed: true})
+	if err != nil {
+		panic(err)
+	}
 	orgsv = NewOrgs(db)
 	us = NewUsers(db, UserOpts{MaxAuthAttempts: 5, AttemptLockDuration: time.Duration(1) * time.Second})
 	code := m.Run()
