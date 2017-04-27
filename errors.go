@@ -20,7 +20,7 @@ type RateLimitExceededError struct {
 }
 
 func (rl *RateLimitExceededError) Error() string {
-	return "- " + strings.Join(rl.Messages, "\n- ")
+	return strings.Join(rl.Messages, "\n- ")
 }
 
 
@@ -45,5 +45,5 @@ type ValidationError struct {
 }
 
 func (v *ValidationError) Error() string {
-	return "- " + strings.Join(v.Messages, "\n- ")
+	return strings.Join(v.Messages, "\n- ")
 }
