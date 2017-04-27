@@ -45,4 +45,15 @@ go get github.com/kwk-super-snippets/gus
  p := &gus.SignInParams{Email:user.Email, Password:tempPass}
  u, err := users.Authenticate(*p)
 ```    
-    
+
+Logging
+--
+By default debug logging is enabled you can either provide your own implementation *log.Logger
+```go
+gus.DebugLogger = log.New(os.Stdout, "GUS: ", log.Ldate|log.Lmicroseconds|log.Lshortfile)
+```
+Or set it to nil to disable logging
+```go
+gus.DebugLogger = nil
+```
+The same goes for `gus.ErrorLogger`
