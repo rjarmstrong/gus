@@ -3,8 +3,8 @@ package gus
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 	"regexp"
+	"strings"
 )
 
 const (
@@ -75,9 +75,9 @@ func CheckUpdated(res sql.Result, err error) error {
 type SortDir string
 
 type ListArgs struct {
-	Size      int `json:"size"`          // Page size
-	Page      int `json:"page"`          // Zero-indexed page
-	OrderBy   string `json:"sort_by"`    // Order by comma separated columns
+	Size      int     `json:"size"`      // Page size
+	Page      int     `json:"page"`      // Zero-indexed page
+	OrderBy   string  `json:"sort_by"`   // Order by comma separated columns
 	Direction SortDir `json:"direction"` // ASC or DESC
 }
 

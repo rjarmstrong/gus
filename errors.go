@@ -23,8 +23,6 @@ func (rl *RateLimitExceededError) Error() string {
 	return strings.Join(rl.Messages, "\n- ")
 }
 
-
-
 func ErrNotFound() error {
 	return &NotFoundError{}
 }
