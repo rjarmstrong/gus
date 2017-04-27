@@ -103,3 +103,19 @@ func TestUsers_Delete(t *testing.T) {
 	assert.Nil(t, u)
 	assert.Error(t, err)
 }
+
+func TestUsers_Suspend(t *testing.T) {
+	cp.Email = "suspend@mail.com"
+	u, tempPassword, err := us.Create(cp)
+	id := u.Id
+	ErrIf(t, err)
+	u, err = us.Authenticate(SignInParams{Email: cp.Email, Password: tempPassword})
+	ErrIf(t, err)
+	err = us.Suspend(id)
+	u, err = us.Authenticate(SignInParams{Email: cp.Email, Password: tempPassword})
+	assert.Error(t, err)
+	err = us.Restore(id)
+	ErrIf(t, err)
+	u, err = us.Authenticate(SignInParams{Email: cp.Email, Password: tempPassword})
+	ErrIf(t, err)
+}

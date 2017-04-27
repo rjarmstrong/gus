@@ -25,6 +25,7 @@ type User struct {
 	Updated   time.Time `json:"updated"`
 	Created   time.Time `json:"created"`
 	Role      Role `json:"role"`
+	Suspended bool `json:"suspended"`
 }
 
 type UserWithToken struct {

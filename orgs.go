@@ -11,7 +11,7 @@ var (
 )
 
 func NewOrgs(db *sql.DB) *Orgs {
-	return &Orgs{db: db}
+	return &Orgs{db: db, Suspender: NewSuspender("users", db)}
 }
 
 type Org struct {
@@ -24,6 +24,7 @@ type Org struct {
 
 type Orgs struct {
 	db *sql.DB
+	*Suspender
 }
 
 type CreateOrgParams struct {

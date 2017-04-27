@@ -137,6 +137,7 @@ CREATE TABLE users (
     org_id INT,
     updated DATE NOT NULL,
     created DATE NOT NULL,
+    suspended BIT,
     deleted BIT,
     role INT,
     CONSTRAINT UC_Email UNIQUE (email)
@@ -159,6 +160,7 @@ CREATE TABLE orgs (
     type INT,
     created DATE NOT NULL,
     updated DATE NOT NULL,
+    suspended BIT,
     deleted BIT
 );
 

@@ -25,11 +25,12 @@ var (
 )
 
 func NewUsers(db *sql.DB) *Users {
-	return &Users{db: db}
+	return &Users{db: db, Suspender: NewSuspender("users", db)}
 }
 
 type Users struct {
 	db *sql.DB
+	*Suspender
 }
 
 func NewCreateUserParams() CreateUserParams {
@@ -66,12 +67,12 @@ func hashPassword(password string) (string, error) {
 
 // Create returns a user, temp password and [error]
 func (us *Users) Create(p CreateUserParams) (*User, string, error) {
-	stmt, err := us.db.Prepare("INSERT INTO users(email, first_name, last_name, phone, password_hash, org_id, updated, created, deleted, role) values(?,?,?,?,?,?,?,?, ?, ?)")
+	stmt, err := us.db.Prepare("INSERT INTO users(email, first_name, last_name, phone, password_hash, org_id, updated, created, deleted, role, suspended) values(?,?,?,?,?,?,?,?,?,?,?)")
 	if err != nil {
 		return nil, "", err
 	}
 	u := &User{Email: p.Email, FirstName: p.FirstName, LastName: p.LastName, Phone: p.Phone,
-		OrgId:    p.OrgId, Created: time.Now(), Updated: time.Now(), Role: p.Role}
+		OrgId:    p.OrgId, Created: time.Now(), Updated: time.Now(), Role: p.Role, Suspended: false}
 
 	password := RandStringBytesMask(15)
 	hash, err := hashPassword(password)
@@ -79,7 +80,7 @@ func (us *Users) Create(p CreateUserParams) (*User, string, error) {
 		return nil, "", err
 	}
 
-	res, err := stmt.Exec(u.Email, u.FirstName, u.LastName, u.Phone, hash, u.OrgId, u.Updated, u.Created, 0, u.Role)
+	res, err := stmt.Exec(u.Email, u.FirstName, u.LastName, u.Phone, hash, u.OrgId, u.Updated, u.Created, 0, u.Role, u.Suspended)
 	if err != nil {
 		if err.Error() == ERR_STRING_EMAIL_CONSTRAINT {
 			return nil, "", ErrEmailTaken
@@ -95,14 +96,14 @@ func (us *Users) Create(p CreateUserParams) (*User, string, error) {
 }
 
 func (us *Users) Get(id int64) (*User, error) {
-	stmt, err := us.db.Prepare("SELECT id, email, first_name, last_name, phone, org_id, created, updated, role from users WHERE id =  ? AND deleted = 0 LIMIT 1")
+	stmt, err := us.db.Prepare("SELECT id, email, first_name, last_name, phone, org_id, created, updated, role, suspended from users WHERE id =  ? AND deleted = 0 LIMIT 1")
 	if err != nil {
 		return nil, err
 	}
 	row := stmt.QueryRow(id)
 	var u User
 	err = CheckNotFound(row.Scan(&u.Id, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId,
-		&u.Created, &u.Updated, &u.Role))
+		&u.Created, &u.Updated, &u.Role, &u.Suspended))
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +134,7 @@ func (va *SignInParams) Validate() error {
 
 // GetByEmail returns a user and password hash
 func (us *Users) GetByEmail(email string) (*User, string, error) {
-	stmt, err := us.db.Prepare("SELECT password_hash, id, email, first_name, last_name, phone, org_id, created, updated, role from users WHERE email = ? AND deleted = 0 LIMIT 1")
+	stmt, err := us.db.Prepare("SELECT password_hash, id, email, first_name, last_name, phone, org_id, created, updated, role, suspended from users WHERE email = ? AND deleted = 0 LIMIT 1")
 	if err != nil {
 		return nil, "", err
 	}
@@ -141,7 +142,7 @@ func (us *Users) GetByEmail(email string) (*User, string, error) {
 	var u User
 	var passwordHash string
 	err = CheckNotFound(row.Scan(&passwordHash, &u.Id, &u.Email, &u.FirstName, &u.LastName, &u.Phone,
-		&u.OrgId, &u.Created, &u.Updated, &u.Role))
+		&u.OrgId, &u.Created, &u.Updated, &u.Role, &u.Suspended))
 	if err != nil {
 		return nil, "", err
 	}
@@ -156,6 +157,9 @@ func (us *Users) Authenticate(p SignInParams) (*User, error) {
 			return nil, ErrNotAuth
 		}
 		return nil, err
+	}
+	if u.Suspended {
+		return nil, ErrNotAuth
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(p.Password))
 	if err != nil {
