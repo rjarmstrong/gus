@@ -5,6 +5,7 @@ import "strings"
 var (
 	ErrNotAuth        = &NotAuthenticatedError{}
 	ErrCantDeleteSelf = ErrInvalid("You can't delete yourself.")
+	ErrCantSuspendSelf = ErrInvalid("You can't suspend yourself.")
 )
 
 type NotAuthenticatedError struct {
