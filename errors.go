@@ -3,8 +3,9 @@ package gus
 import "strings"
 
 var (
-	ErrNotAuth        = &NotAuthenticatedError{}
-	ErrCantDeleteSelf = ErrInvalid("You can't delete yourself.")
+	ErrNotAuth         = &NotAuthenticatedError{}
+	ErrNotFound        = &NotFoundError{}
+	ErrCantDeleteSelf  = ErrInvalid("You can't delete yourself.")
 	ErrCantSuspendSelf = ErrInvalid("You can't suspend yourself.")
 )
 
@@ -21,10 +22,6 @@ type RateLimitExceededError struct {
 
 func (rl *RateLimitExceededError) Error() string {
 	return strings.Join(rl.Messages, "\n- ")
-}
-
-func ErrNotFound() error {
-	return &NotFoundError{}
 }
 
 type NotFoundError struct {

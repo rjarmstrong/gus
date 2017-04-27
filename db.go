@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	ERR_STRING_NO_ROWS                = "sql: no rows in result set"
 	ERR_STRING_NO_SUCH_COLUMN         = "sql: no such column"
 	DirectionAsc              SortDir = "ASC"
 	DirectionDesc             SortDir = "DESC"
@@ -54,8 +53,8 @@ func Seed(db *sql.DB, xtraSeedSql ...string) error {
 
 func CheckNotFound(err error) error {
 	if err != nil {
-		if err.Error() == ERR_STRING_NO_ROWS {
-			return ErrNotFound()
+		if err == sql.ErrNoRows {
+			return ErrNotFound
 		}
 		return err
 	}
@@ -68,7 +67,7 @@ func CheckUpdated(res sql.Result, err error) error {
 	}
 	a, err := res.RowsAffected()
 	if a < 1 {
-		return ErrNotFound()
+		return ErrNotFound
 	}
 	return nil
 }
