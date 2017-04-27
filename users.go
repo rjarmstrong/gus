@@ -43,17 +43,21 @@ type CreateUserParams struct {
 	Phone     string `json:"phone"`
 	OrgId     int64 `json:"org_id"`
 	Role      Role `json:"role"`
+	CustomValidator `json:"-"`
 }
 
-func (cp *CreateUserParams) Validate() error {
-	if !govalidator.IsEmail(cp.Email) {
+func (va *CreateUserParams) Validate() error {
+	if va.CustomValidator != nil {
+		return va.CustomValidator()
+	}
+	if !govalidator.IsEmail(va.Email) {
 		return ErrEmailRequired
 	}
 	return nil
 }
 
 func hashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
 		return "", err
 	}
@@ -108,16 +112,20 @@ func (us *Users) Get(id int64) (*User, error) {
 type SignInParams struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	CustomValidator `json:"-"`
 }
 
-func (s *SignInParams) Validate() error {
-	if govalidator.IsNull(s.Password) {
+func (va *SignInParams) Validate() error {
+	if va.CustomValidator != nil {
+		return va.CustomValidator()
+	}
+	if govalidator.IsNull(va.Password) {
 		return ErrPasswordRequired
 	}
-	if govalidator.IsNull(s.Email) {
+	if govalidator.IsNull(va.Email) {
 		return ErrEmailRequired
 	}
-	if !govalidator.IsEmail(s.Email) {
+	if !govalidator.IsEmail(va.Email) {
 		return ErrEmailInvalid
 	}
 	return nil
@@ -163,10 +171,14 @@ type UpdateUserParams struct {
 	Email     *string `json:"email"`
 	Phone     *string `json:"phone"`
 	Role      *Role `json:"role"`
+	CustomValidator `json:"-"`
 }
 
-func (up *UpdateUserParams) Validate() error {
-	if *up.Email != "" && !govalidator.IsEmail(*up.Email) {
+func (va *UpdateUserParams) Validate() error {
+	if va.CustomValidator != nil {
+		return va.CustomValidator()
+	}
+	if *va.Email != "" && !govalidator.IsEmail(*va.Email) {
 		return ErrInvalid("'email' invalid.")
 	}
 	return nil
@@ -200,9 +212,13 @@ func (us *Users) Delete(id int64) error {
 type ListUsersParams struct {
 	OrgId int64 `json:"org_id"`
 	ListArgs
+	CustomValidator `json:"-"`
 }
 
-func (pm *ListUsersParams) Validate() error {
+func (va *ListUsersParams) Validate() error {
+	if va.CustomValidator != nil {
+		return va.CustomValidator()
+	}
 	return nil
 }
 
@@ -231,13 +247,17 @@ func (us *Users) List(p ListUsersParams) ([]*User, error) {
 
 type ResetPasswordParams struct {
 	Email string `json:"email"`
+	CustomValidator `json:"-"`
 }
 
-func (p *ResetPasswordParams) Validate() error {
-	if govalidator.IsNull(p.Email) {
+func (va *ResetPasswordParams) Validate() error {
+	if va.CustomValidator != nil {
+		return va.CustomValidator()
+	}
+	if govalidator.IsNull(va.Email) {
 		return ErrEmailRequired
 	}
-	if !govalidator.IsEmail(p.Email) {
+	if !govalidator.IsEmail(va.Email) {
 		return ErrEmailInvalid
 	}
 	return nil
@@ -262,22 +282,26 @@ type ChangePasswordParams struct {
 	ExistingPassword string `json:"existing_password"`
 	NewPassword      string `json:"new_password"`
 	ResetToken       string `json:"reset_token"`
+	CustomValidator `json:"-"`
 }
 
-func (s *ChangePasswordParams) Validate() error {
-	if govalidator.IsNull(s.Email) {
+func (va *ChangePasswordParams) Validate() error {
+	if va.CustomValidator != nil {
+		return va.CustomValidator()
+	}
+	if govalidator.IsNull(va.Email) {
 		return ErrEmailRequired
 	}
-	if !govalidator.IsEmail(s.Email) {
+	if !govalidator.IsEmail(va.Email) {
 		return ErrEmailInvalid
 	}
-	if govalidator.IsNull(s.ExistingPassword) && govalidator.IsNull(s.ResetToken) {
+	if govalidator.IsNull(va.ExistingPassword) && govalidator.IsNull(va.ResetToken) {
 		return ErrInvalid("'existing_password' or 'reset_token' required.")
 	}
-	if govalidator.IsNull(s.NewPassword) {
+	if govalidator.IsNull(va.NewPassword) {
 		return ErrInvalid("'new_password' is required.")
 	}
-	if !ValidatePassword(s.NewPassword) {
+	if !ValidatePassword(va.NewPassword) {
 		return ErrPasswordInvalid
 	}
 	return nil

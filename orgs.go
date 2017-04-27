@@ -29,10 +29,14 @@ type Orgs struct {
 type CreateOrgParams struct {
 	Name string `json:"name"`
 	Type OrgType `json:"type"`
+	CustomValidator `json:"-"`
 }
 
-func (cp CreateOrgParams) Validate() error {
-	if govalidator.IsNull(cp.Name) {
+func (va CreateOrgParams) Validate() error {
+	if va.CustomValidator != nil {
+		return va.CustomValidator()
+	}
+	if govalidator.IsNull(va.Name) {
 		return ErrNameRequired
 	}
 	return nil
@@ -70,10 +74,14 @@ func (us *Orgs) Get(id int64) (*Org, error) {
 type UpdateOrgParams struct {
 	Id   *int64 `json:"id"`
 	Name *string `json:"name"`
+	CustomValidator `json:"-"`
 }
 
-func (up *UpdateOrgParams) Validate() error {
-	if govalidator.IsNull(*up.Name) {
+func (va *UpdateOrgParams) Validate() error {
+	if va.CustomValidator != nil {
+		return va.CustomValidator()
+	}
+	if govalidator.IsNull(*va.Name) {
 		return ErrInvalid("'name' required.")
 	}
 	return nil
@@ -106,9 +114,13 @@ func (us *Orgs) Delete(id int64) error {
 
 type ListOrgsParams struct {
 	ListArgs
+	CustomValidator `json:"-"`
 }
 
-func (pm *ListOrgsParams) Validate() error {
+func (va *ListOrgsParams) Validate() error {
+	if va.CustomValidator != nil {
+		return va.CustomValidator()
+	}
 	return nil
 }
 

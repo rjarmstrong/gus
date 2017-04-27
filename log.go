@@ -6,10 +6,11 @@ import (
 	"os"
 	"io"
 	"runtime/debug"
+	"io/ioutil"
 )
 
 var errr = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Lmicroseconds|log.Lshortfile)
-var dbg = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Lmicroseconds|log.Lshortfile)
+var dbg = log.New(ioutil.Discard, "DEBUG: ", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
 func SetDebugOutput(out io.Writer) {
 	dbg.SetOutput(out)
