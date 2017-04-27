@@ -15,7 +15,7 @@ const (
 	DirectionDesc             SortDir = "DESC"
 )
 
-type DbOptions struct {
+type DbOpts struct {
 	DriverName     string   // Optional will use sqlite3 by default.
 	DataSourceName string   // Optional will use './gus.db' by default.
 	Seed           bool     // Caution will regenerate schema and delete data.
@@ -23,7 +23,7 @@ type DbOptions struct {
 }
 
 // Gets the sql database handle for the database specified in the DriverName options parameter.
-func GetDb(o DbOptions) *sql.DB {
+func GetDb(o DbOpts) *sql.DB {
 	if o.DriverName == "" {
 		o.DriverName = "sqlite3"
 	}

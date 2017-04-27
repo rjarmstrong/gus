@@ -28,10 +28,11 @@ var (
 type Role int64
 
 type UserOpts struct {
-	MaxAuthAttempts     int
-	AttemptLockDuration time.Duration
-	PassGen             PasswordGen
-	PassGenLength       int
+	MaxAuthAttempts     int           // Maximum amount of times a user can attempt to login with a given username.
+	AttemptLockDuration time.Duration // Duration which the user will be locked out if MaxAuthAttempts has been exceeded.
+	PassGen             PasswordGen   // A function used to generate passwords and reset tokens
+	PassGenLength       int           // When a random password is generated when a user is created by another user
+	// (as opposed to registered) this is the length of the generated password length.
 }
 
 type User struct {
