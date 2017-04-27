@@ -153,6 +153,12 @@ CREATE TABLE password_resets (
     deleted BIT
 );
 
+DROP TABLE IF EXISTS password_attempts;
+CREATE TABLE password_attempts (
+    username VARCHAR(250),
+    created INT NOT NULL
+);
+
 DROP TABLE IF EXISTS orgs;
 CREATE TABLE orgs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -163,5 +169,6 @@ CREATE TABLE orgs (
     suspended BIT,
     deleted BIT
 );
+
 
 `

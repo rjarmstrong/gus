@@ -4,6 +4,7 @@ import (
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"fmt"
+	"time"
 )
 
 var cp = CreateUserParams{Email: "user@mail.com", OrgId: 1}
@@ -121,4 +122,16 @@ func TestUsers_Suspend(t *testing.T) {
 	ErrIf(t, orgsv.Suspend(cp.OrgId))
 	_, err = us.Authenticate(SignInParams{Email: cp.Email, Password: tempPassword})
 	assert.Error(t, err)
+}
+
+func TestUsers_Lock(t *testing.T) {
+	username := "lock@mail.com"
+	assert.False(t, us.isLocked(username))
+	assert.False(t, us.isLocked(username))
+	assert.False(t, us.isLocked(username))
+	assert.False(t, us.isLocked(username))
+	assert.False(t, us.isLocked(username))
+	assert.True(t, us.isLocked(username))
+	time.Sleep(time.Millisecond * time.Duration(1001))
+	assert.False(t, us.isLocked(username))
 }

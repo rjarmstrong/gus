@@ -25,13 +25,26 @@ var (
 	ResetTokenExpiryKey     = "RESET_TOKEN_EXPIRY"
 )
 
-func NewUsers(db *sql.DB) *Users {
-	return &Users{db: db, Suspender: NewSuspender("users", db)}
+type UserOptions struct {
+	MaxAuthAttempts     int64
+	AttemptLockDuration time.Duration
+}
+
+func NewUsers(db *sql.DB, opt UserOptions) *Users {
+	if opt.AttemptLockDuration == 0 {
+		opt.AttemptLockDuration = time.Duration(5) * time.Minute
+	}
+	return &Users{
+		db:          db,
+		Suspender:   NewSuspender("users", db),
+		UserOptions: opt,
+	}
 }
 
 type Users struct {
 	db *sql.DB
 	*Suspender
+	UserOptions
 }
 
 func NewCreateUserParams() CreateUserParams {
@@ -153,6 +166,9 @@ func (us *Users) GetByEmail(email string) (*UserWithClaims, string, error) {
 }
 
 func (us *Users) Authenticate(p SignInParams) (*UserWithClaims, error) {
+	if us.isLocked(p.Email) {
+		return nil, ErrNotAuth
+	}
 	u, hash, err := us.GetByEmail(p.Email)
 	if err != nil {
 		_, ok := err.(*NotFoundError)
@@ -163,6 +179,7 @@ func (us *Users) Authenticate(p SignInParams) (*UserWithClaims, error) {
 	}
 	Debug(fmt.Sprintf("CLAIMS: %+v", *u.Claims))
 	if u.Suspended || u.OrgSuspended {
+		Debug("FAILED ATTEMPT:", us.isLocked(p.Email))
 		return nil, ErrNotAuth
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(p.Password))
@@ -170,6 +187,29 @@ func (us *Users) Authenticate(p SignInParams) (*UserWithClaims, error) {
 		return nil, ErrNotAuth
 	}
 	return u, nil
+}
+
+func (us *Users) isLocked(username string) bool {
+	stmt, err := us.db.Prepare("INSERT into password_attempts (username, created) values (?, ?)")
+	_, err = stmt.Exec(username, time.Now().Unix())
+	if err != nil {
+		LogErr(err)
+		// Lock the account regardless
+		return true
+	}
+
+	since := time.Now().Unix() - int64(us.AttemptLockDuration/time.Second)
+	Debug("SINCE:", since)
+	row := us.db.QueryRow("SELECT COUNT(username) FROM password_attempts WHERE created > ? AND username = ?", since, username)
+	var count int64
+	err = row.Scan(&count)
+	if err != nil {
+		LogErr(err)
+		// Lock the account regardless
+		return true
+	}
+	Debug("ATTEMPTS:", count, "max:", us.MaxAuthAttempts)
+	return count > us.MaxAuthAttempts
 }
 
 type UpdateUserParams struct {
