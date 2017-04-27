@@ -10,6 +10,8 @@ var (
 	ErrNameRequired error = ErrInvalid("'name' required.")
 )
 
+type OrgType int64
+
 func NewOrgs(db *sql.DB) *Orgs {
 	return &Orgs{db: db, Suspender: NewSuspender("orgs", db)}
 }

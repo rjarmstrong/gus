@@ -25,26 +25,65 @@ var (
 	ResetTokenExpiryKey     = "RESET_TOKEN_EXPIRY"
 )
 
-type UserOptions struct {
-	MaxAuthAttempts     int64
+type Role int64
+
+type UserOpts struct {
+	MaxAuthAttempts     int
 	AttemptLockDuration time.Duration
+	PassGen             PasswordGen
+	PassGenLength       int
 }
 
-func NewUsers(db *sql.DB, opt UserOptions) *Users {
+type User struct {
+	Id        int64 `json:"id"`
+	Email     string `json:"email"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Phone     string `json:"phone"`
+	OrgId     int64 `json:"org_id"`
+	Updated   time.Time `json:"updated"`
+	Created   time.Time `json:"created"`
+	Role      Role `json:"role"`
+	Suspended bool `json:"suspended"`
+}
+
+type UserWithClaims struct {
+	*User
+	*Claims
+}
+
+type Claims struct {
+	Role         Role `json:"role"`
+	OrgId        int64 `json:"org_id"`
+	OrgSuspended bool `json:"org_suspended"`
+}
+
+type UserWithToken struct {
+	User
+	Token string `json:"token"`
+}
+
+func NewUsers(db *sql.DB, opt UserOpts) *Users {
 	if opt.AttemptLockDuration == 0 {
 		opt.AttemptLockDuration = time.Duration(5) * time.Minute
 	}
+	if opt.PassGen == nil {
+		opt.PassGen = RandStringBytesMaskImprSrc
+	}
+	if opt.PassGenLength == 0 {
+		opt.PassGenLength = 15
+	}
 	return &Users{
-		db:          db,
-		Suspender:   NewSuspender("users", db),
-		UserOptions: opt,
+		db:        db,
+		Suspender: NewSuspender("users", db),
+		UserOpts:  opt,
 	}
 }
 
 type Users struct {
 	db *sql.DB
 	*Suspender
-	UserOptions
+	UserOpts
 }
 
 func NewCreateUserParams() CreateUserParams {
@@ -79,7 +118,7 @@ func hashPassword(password string) (string, error) {
 	return string(hash), nil
 }
 
-// Create returns a user, temp password and [error]
+// Create returns a user, random password and [error]
 func (us *Users) Create(p CreateUserParams) (*User, string, error) {
 	stmt, err := us.db.Prepare("INSERT INTO users(email, first_name, last_name, phone, password_hash, org_id, updated, created, deleted, role, suspended) values(?,?,?,?,?,?,?,?,?,?,?)")
 	if err != nil {
@@ -88,7 +127,7 @@ func (us *Users) Create(p CreateUserParams) (*User, string, error) {
 	u := &User{Email: p.Email, FirstName: p.FirstName, LastName: p.LastName, Phone: p.Phone,
 		OrgId:    p.OrgId, Created: time.Now(), Updated: time.Now(), Role: p.Role, Suspended: false}
 
-	password := RandStringBytesMask(15)
+	password := us.UserOpts.PassGen(us.UserOpts.PassGenLength)
 	hash, err := hashPassword(password)
 	if err != nil {
 		return nil, "", err
@@ -201,7 +240,7 @@ func (us *Users) isLocked(username string) bool {
 	since := time.Now().Unix() - int64(us.AttemptLockDuration/time.Second)
 	Debug("SINCE:", since)
 	row := us.db.QueryRow("SELECT COUNT(username) FROM password_attempts WHERE created > ? AND username = ?", since, username)
-	var count int64
+	var count int
 	err = row.Scan(&count)
 	if err != nil {
 		LogErr(err)
@@ -316,7 +355,7 @@ func (us *Users) ResetPassword(p ResetPasswordParams) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	token := RandStringBytesMask(256)
+	token := us.PassGen(256)
 	stmt, err := us.db.Prepare("INSERT into password_resets (user_id, email, reset_token, created, deleted) values (?, ?, ?, ?, ?)")
 	_, err = stmt.Exec(u.Id, u.Email, token, time.Now(), 0)
 	if err != nil {
