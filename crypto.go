@@ -19,6 +19,18 @@ const (
 
 type PasswordGen func(n int) string
 
+// RandStringBytesMask use only for dev purposes to create predictable rand passwords since the source is constant.
+func RandStringBytesMask(n int) string {
+	b := make([]byte, n)
+	for i := 0; i < n; {
+		if idx := int(rand.Int63() & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i++
+		}
+	}
+	return string(b)
+}
+
 var src = rand.NewSource(time.Now().UnixNano())
 
 func RandStringBytesMaskImprSrc(n int) string {
