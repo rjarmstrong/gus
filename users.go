@@ -135,7 +135,7 @@ func (va *SignInParams) Validate() error {
 
 // GetByEmail returns a user and password hash
 func (us *Users) GetByEmail(email string) (*UserWithClaims, string, error) {
-	stmt, err := us.db.Prepare("SELECT u.password_hash, u.id, u.email, u.first_name, u.last_name, u.phone, u.org_id, u.created, u.updated, u.role, u.suspended, o.suspended from users u left join orgs o on u.org_id = o.id WHERE u.email = ? AND u.deleted = 0 LIMIT 1")
+	stmt, err := us.db.Prepare("SELECT u.password_hash, u.id, u.email, u.first_name, u.last_name, u.phone, u.org_id, u.created, u.updated, u.role, u.suspended, COALESCE(o.suspended, 0) from users u left join orgs o on u.org_id = o.id WHERE u.email = ? AND u.deleted = 0 LIMIT 1")
 	if err != nil {
 		return nil, "", err
 	}
