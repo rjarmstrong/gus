@@ -11,15 +11,16 @@ var (
 )
 
 func NewOrgs(db *sql.DB) *Orgs {
-	return &Orgs{db: db, Suspender: NewSuspender("users", db)}
+	return &Orgs{db: db, Suspender: NewSuspender("orgs", db)}
 }
 
 type Org struct {
-	Id      int64 `json:"id"`
-	Name    string `json:"name"`
-	Type    OrgType `json:"type"`
-	Updated time.Time `json:"updated"`
-	Created time.Time `json:"created"`
+	Id        int64 `json:"id"`
+	Name      string `json:"name"`
+	Type      OrgType `json:"type"`
+	Updated   time.Time `json:"updated"`
+	Created   time.Time `json:"created"`
+	Suspended bool `json:"suspended"`
 }
 
 type Orgs struct {
@@ -44,12 +45,12 @@ func (va CreateOrgParams) Validate() error {
 }
 
 func (us *Orgs) Create(p CreateOrgParams) (*Org, error) {
-	stmt, err := us.db.Prepare("INSERT INTO orgs(name, type, updated, created, deleted) values(?,?,?,?,?)")
+	stmt, err := us.db.Prepare("INSERT INTO orgs(name, type, updated, created, deleted, suspended) values(?,?,?,?,?,?)")
 	if err != nil {
 		return nil, err
 	}
 	u := &Org{Name: p.Name, Type: p.Type, Created: time.Now(), Updated: time.Now()}
-	res, err := stmt.Exec(u.Name, u.Type, u.Updated, u.Created, 0)
+	res, err := stmt.Exec(u.Name, u.Type, u.Updated, u.Created, 0, false)
 	id, err := res.LastInsertId()
 	if err != nil {
 		return nil, err
@@ -59,13 +60,13 @@ func (us *Orgs) Create(p CreateOrgParams) (*Org, error) {
 }
 
 func (us *Orgs) Get(id int64) (*Org, error) {
-	stmt, err := us.db.Prepare("SELECT id, name, type, created, updated from orgs WHERE id = ? AND deleted = 0 LIMIT 1")
+	stmt, err := us.db.Prepare("SELECT id, name, type, created, updated, suspended from orgs WHERE id = ? AND deleted = 0 LIMIT 1")
 	if err != nil {
 		return nil, err
 	}
 	row := stmt.QueryRow(id)
 	var u Org
-	err = CheckNotFound(row.Scan(&u.Id, &u.Name, &u.Type, &u.Created, &u.Updated))
+	err = CheckNotFound(row.Scan(&u.Id, &u.Name, &u.Type, &u.Created, &u.Updated, &u.Suspended))
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +127,7 @@ func (va *ListOrgsParams) Validate() error {
 }
 
 func (us *Orgs) List(p ListOrgsParams) ([]*Org, error) {
-	q := "SELECT id, name, type, created, updated from orgs WHERE deleted = 0"
+	q := "SELECT id, name, type, created, updated, suspended from orgs WHERE deleted = 0"
 	rows, err := GetRows(us.db, q, p.ListArgs)
 	if err != nil {
 		return nil, err
@@ -134,7 +135,7 @@ func (us *Orgs) List(p ListOrgsParams) ([]*Org, error) {
 	ogs := []*Org{}
 	for rows.Next() {
 		u := &Org{}
-		rows.Scan(&u.Id, &u.Name, &u.Type, &u.Created, &u.Updated)
+		rows.Scan(&u.Id, &u.Name, &u.Type, &u.Created, &u.Updated, &u.Suspended)
 		ogs = append(ogs, u)
 	}
 	if err = rows.Err(); err != nil {

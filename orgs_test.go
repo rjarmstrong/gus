@@ -8,45 +8,45 @@ import (
 var corg = CreateOrgParams{Name: "Trainers Inc."}
 
 func TestOrgs_Create(t *testing.T) {
-	u, err := ps.Create(corg)
+	u, err := orgsv.Create(corg)
 	ErrIf(t, err)
 	assert.Equal(t, u.Name, corg.Name)
 	assert.True(t, u.Id > 0)
 
 	// Get
-	u, err = ps.Get(u.Id)
+	u, err = orgsv.Get(u.Id)
 	ErrIf(t, err)
 	assert.Equal(t, u.Name, corg.Name)
 
-	orgs, err := ps.List(ListOrgsParams{})
+	orgs, err := orgsv.List(ListOrgsParams{})
 	ErrIf(t, err)
 	assert.Equal(t, 1, len(orgs))
 	assert.Equal(t, corg.Name, orgs[0].Name)
 }
 
 func TestOrgs_Update(t *testing.T) {
-	u, err := ps.Create(corg)
+	u, err := orgsv.Create(corg)
 	ErrIf(t, err)
 	name := "New Name"
 	up := UpdateOrgParams{Id: &u.Id, Name: &name}
-	err = ps.Update(up)
+	err = orgsv.Update(up)
 	ErrIf(t, err)
-	u, _ = ps.Get(u.Id)
+	u, _ = orgsv.Get(u.Id)
 	assert.Equal(t, *up.Name, u.Name)
 
 	// Should not allow update of non-existing record
 	id := int64(33453453)
 	up.Id = &id
-	err = ps.Update(up)
+	err = orgsv.Update(up)
 	assert.Error(t, err)
 }
 
 func TestOrgs_Delete(t *testing.T) {
-	u, err := ps.Create(corg)
+	u, err := orgsv.Create(corg)
 	ErrIf(t, err)
-	err = ps.Delete(u.Id)
+	err = orgsv.Delete(u.Id)
 	ErrIf(t, err)
-	u, err = ps.Get(u.Id)
+	u, err = orgsv.Get(u.Id)
 	assert.Nil(t, u)
 	assert.Error(t, err)
 }

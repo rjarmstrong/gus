@@ -8,13 +8,14 @@ import (
 	"runtime/debug"
 )
 
-var ps *Orgs
+var orgsv *Orgs
 var us *Users
 var db *sql.DB
 
 func TestMain(m *testing.M) {
+	SetDebugOutput(os.Stdout)
 	db = GetDb(DbOptions{Seed: true})
-	ps = NewOrgs(db)
+	orgsv = NewOrgs(db)
 	us = NewUsers(db)
 	code := m.Run()
 	os.Exit(code)

@@ -5,6 +5,7 @@ import (
 	"time"
 	"github.com/asaskevich/govalidator"
 	"golang.org/x/crypto/bcrypt"
+	"fmt"
 )
 
 const (
@@ -133,24 +134,27 @@ func (va *SignInParams) Validate() error {
 }
 
 // GetByEmail returns a user and password hash
-func (us *Users) GetByEmail(email string) (*User, string, error) {
-	stmt, err := us.db.Prepare("SELECT password_hash, id, email, first_name, last_name, phone, org_id, created, updated, role, suspended from users WHERE email = ? AND deleted = 0 LIMIT 1")
+func (us *Users) GetByEmail(email string) (*UserWithClaims, string, error) {
+	stmt, err := us.db.Prepare("SELECT u.password_hash, u.id, u.email, u.first_name, u.last_name, u.phone, u.org_id, u.created, u.updated, u.role, u.suspended, o.suspended from users u left join orgs o on u.org_id = o.id WHERE u.email = ? AND u.deleted = 0 LIMIT 1")
 	if err != nil {
 		return nil, "", err
 	}
 	row := stmt.QueryRow(email)
 	var u User
 	var passwordHash string
+	var orgSuspended bool
 	err = CheckNotFound(row.Scan(&passwordHash, &u.Id, &u.Email, &u.FirstName, &u.LastName, &u.Phone,
-		&u.OrgId, &u.Created, &u.Updated, &u.Role, &u.Suspended))
+		&u.OrgId, &u.Created, &u.Updated, &u.Role, &u.Suspended, &orgSuspended))
 	if err != nil {
 		return nil, "", err
 	}
-	return &u, passwordHash, err
+	c := &UserWithClaims{User: &u, Claims: &Claims{OrgId: u.OrgId, Role: u.Role, OrgSuspended: orgSuspended}}
+	return c, passwordHash, err
 }
 
-func (us *Users) Authenticate(p SignInParams) (*User, error) {
+func (us *Users) Authenticate(p SignInParams) (*UserWithClaims, error) {
 	u, hash, err := us.GetByEmail(p.Email)
+	Debug(fmt.Sprintf("CLAIMS: %+v", *u.Claims))
 	if err != nil {
 		_, ok := err.(*NotFoundError)
 		if ok {
@@ -158,7 +162,7 @@ func (us *Users) Authenticate(p SignInParams) (*User, error) {
 		}
 		return nil, err
 	}
-	if u.Suspended {
+	if u.Suspended || u.OrgSuspended {
 		return nil, ErrNotAuth
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(p.Password))

@@ -28,6 +28,17 @@ type User struct {
 	Suspended bool `json:"suspended"`
 }
 
+type UserWithClaims struct {
+	*User
+	*Claims
+}
+
+type Claims struct {
+	Role         Role `json:"role"`
+	OrgId        int64 `json:"org_id"`
+	OrgSuspended bool `json:"org_suspended"`
+}
+
 type UserWithToken struct {
 	User
 	Token string `json:"token"`
