@@ -97,12 +97,18 @@ func TestUsers_Update(t *testing.T) {
 func TestUsers_Delete(t *testing.T) {
 	cp.Email = "delete@mail.com"
 	u, _, err := us.Create(cp)
+	id := u.Id
 	ErrIf(t, err)
-	err = us.Delete(u.Id)
+	err = us.Delete(id)
 	ErrIf(t, err)
-	u, err = us.Get(u.Id)
+	u, err = us.Get(id)
 	assert.Nil(t, u)
 	assert.Error(t, err)
+	err = us.UnDelete(id)
+	ErrIf(t, err)
+	u, err = us.Get(id)
+	ErrIf(t, err)
+	assert.Equal(t, u.Email, cp.Email)
 }
 
 func TestUsers_AssignRole(t *testing.T) {

@@ -30,3 +30,19 @@ func (su *Suspender) Restore(id int64) error {
 	}
 	return CheckUpdated(stmt.Exec(time.Now(), id))
 }
+
+func (su *Suspender) Delete(id int64) error {
+	stmt, err := su.db.Prepare(fmt.Sprintf("UPDATE %s SET deleted = 1, updated = ? WHERE id = ? AND deleted = 0", su.table))
+	if err != nil {
+		return err
+	}
+	return CheckUpdated(stmt.Exec(time.Now(), id))
+}
+
+func (su *Suspender) UnDelete(id int64) error {
+	stmt, err := su.db.Prepare(fmt.Sprintf("UPDATE %s SET deleted = 0, updated = ? WHERE id = ? AND deleted = 1", su.table))
+	if err != nil {
+		return err
+	}
+	return CheckUpdated(stmt.Exec(time.Now(), id))
+}

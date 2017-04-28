@@ -108,14 +108,6 @@ func (us *Orgs) Update(p UpdateOrgParams) error {
 	return nil
 }
 
-func (us *Orgs) Delete(id int64) error {
-	stmt, err := us.db.Prepare("UPDATE orgs SET deleted = 1, updated = ? WHERE id = ? AND deleted = 0")
-	if err != nil {
-		return err
-	}
-	return CheckUpdated(stmt.Exec(time.Now(), id))
-}
-
 type ListOrgsParams struct {
 	ListArgs
 	CustomValidator `json:"-"`
