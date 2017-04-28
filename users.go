@@ -188,13 +188,13 @@ func (va *SignInParams) Validate() error {
 	return nil
 }
 
-// GetByEmail returns a user and password hash
-func (us *Users) GetByEmail(email string) (*UserWithClaims, string, error) {
+// GetByUsername returns a user and password hash
+func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error) {
 	stmt, err := us.db.Prepare("SELECT u.password_hash, u.id, u.email, u.first_name, u.last_name, u.phone, u.org_id, u.created, u.updated, u.role, u.suspended, COALESCE(o.suspended, 0) from users u left join orgs o on u.org_id = o.id WHERE u.email = ? AND u.deleted = 0 LIMIT 1")
 	if err != nil {
 		return nil, "", err
 	}
-	row := stmt.QueryRow(email)
+	row := stmt.QueryRow(username)
 	var u User
 	var passwordHash string
 	var orgSuspended bool
@@ -211,7 +211,7 @@ func (us *Users) Authenticate(p SignInParams) (*UserWithClaims, error) {
 	if us.isLocked(p.Email) {
 		return nil, &RateLimitExceededError{Messages: []string{"Too many sign-in attempts try again later."}}
 	}
-	u, hash, err := us.GetByEmail(p.Email)
+	u, hash, err := us.GetByUsername(p.Email)
 	if err != nil {
 		_, ok := err.(*NotFoundError)
 		if ok {
@@ -346,8 +346,11 @@ func (va *ListUsersParams) Validate() error {
 }
 
 func (us *Users) List(p ListUsersParams) ([]*User, error) {
-	q := "SELECT id, email, first_name, last_name, phone, org_id, created, updated, role from users WHERE deleted = 0"
+	q := "SELECT id, email, first_name, last_name, phone, org_id, created, updated, role from users WHERE 1"
 	args := []interface{}{}
+	if !p.Deleted {
+		q += " AND deleted = 0"
+	}
 	if p.OrgId > 0 {
 		q += " AND org_id = ?"
 		args = append(args, p.OrgId)
@@ -387,7 +390,7 @@ func (va *ResetPasswordParams) Validate() error {
 }
 
 func (us *Users) ResetPassword(p ResetPasswordParams) (string, error) {
-	u, _, err := us.GetByEmail(p.Email)
+	u, _, err := us.GetByUsername(p.Email)
 	if err != nil {
 		return "", err
 	}

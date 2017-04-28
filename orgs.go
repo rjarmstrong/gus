@@ -121,7 +121,10 @@ func (va *ListOrgsParams) Validate() error {
 }
 
 func (us *Orgs) List(p ListOrgsParams) ([]*Org, error) {
-	q := "SELECT id, name, type, created, updated, suspended from orgs WHERE deleted = 0"
+	q := "SELECT id, name, type, created, updated, suspended from orgs WHERE 1"
+	if !p.Deleted {
+		q += " AND deleted = 0"
+	}
 	rows, err := GetRows(us.db, q, p.ListArgs)
 	if err != nil {
 		return nil, err
