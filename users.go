@@ -37,6 +37,8 @@ type UserOpts struct {
 
 type User struct {
 	Id        int64 `json:"id"`
+	Uid       string `json:"uid"`      // A universally unique id such as a uuid
+	Username  string `json:"username"` // Same as email?? If not supplied.
 	Email     string `json:"email"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
@@ -289,8 +291,8 @@ func (us *Users) Update(p UpdateUserParams) error {
 }
 
 type AssignRoleParams struct {
-	Id        *int64 `json:"id"`
-	Role      *Role `json:"role"`
+	Id   *int64 `json:"id"`
+	Role *Role `json:"role"`
 	CustomValidator `json:"-"`
 }
 
