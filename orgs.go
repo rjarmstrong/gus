@@ -2,8 +2,8 @@ package gus
 
 import (
 	"database/sql"
-	"time"
 	"github.com/asaskevich/govalidator"
+	"time"
 )
 
 var (
@@ -17,12 +17,12 @@ func NewOrgs(db *sql.DB) *Orgs {
 }
 
 type Org struct {
-	Id        int64 `json:"id"`
-	Name      string `json:"name"`
-	Type      OrgType `json:"type"`
+	Id        int64     `json:"id"`
+	Name      string    `json:"name"`
+	Type      OrgType   `json:"type"`
 	Updated   time.Time `json:"updated"`
 	Created   time.Time `json:"created"`
-	Suspended bool `json:"suspended"`
+	Suspended bool      `json:"suspended"`
 }
 
 type Orgs struct {
@@ -31,7 +31,7 @@ type Orgs struct {
 }
 
 type CreateOrgParams struct {
-	Name string `json:"name"`
+	Name string  `json:"name"`
 	Type OrgType `json:"type"`
 	CustomValidator `json:"-"`
 }
@@ -76,7 +76,7 @@ func (us *Orgs) Get(id int64) (*Org, error) {
 }
 
 type UpdateOrgParams struct {
-	Id   *int64 `json:"id"`
+	Id   *int64  `json:"id"`
 	Name *string `json:"name"`
 	CustomValidator `json:"-"`
 }

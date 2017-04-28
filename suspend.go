@@ -1,9 +1,9 @@
 package gus
 
 import (
-	"time"
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 func NewSuspender(table string, db *sql.DB) *Suspender {

@@ -2,10 +2,10 @@ package gus
 
 import (
 	"database/sql"
-	"time"
+	"fmt"
 	"github.com/asaskevich/govalidator"
 	"golang.org/x/crypto/bcrypt"
-	"fmt"
+	"time"
 )
 
 const (
@@ -36,18 +36,18 @@ type UserOpts struct {
 }
 
 type User struct {
-	Id        int64 `json:"id"`
-	Uid       string `json:"uid"`      // A universally unique id such as a uuid
-	Username  string `json:"username"` // Same as email?? If not supplied.
-	Email     string `json:"email"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Phone     string `json:"phone"`
-	OrgId     int64 `json:"org_id"`
+	Id        int64     `json:"id"`
+	Uid       string    `json:"uid"`      // A universally unique id such as a uuid
+	Username  string    `json:"username"` // Same as email?? If not supplied.
+	Email     string    `json:"email"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	Phone     string    `json:"phone"`
+	OrgId     int64     `json:"org_id"`
 	Updated   time.Time `json:"updated"`
 	Created   time.Time `json:"created"`
-	Role      Role `json:"role"`
-	Suspended bool `json:"suspended"`
+	Role      Role      `json:"role"`
+	Suspended bool      `json:"suspended"`
 }
 
 type UserWithClaims struct {
@@ -56,9 +56,9 @@ type UserWithClaims struct {
 }
 
 type Claims struct {
-	Role         Role `json:"role"`
+	Role         Role  `json:"role"`
 	OrgId        int64 `json:"org_id"`
-	OrgSuspended bool `json:"org_suspended"`
+	OrgSuspended bool  `json:"org_suspended"`
 }
 
 type UserWithToken struct {
@@ -98,8 +98,8 @@ type CreateUserParams struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Phone     string `json:"phone"`
-	OrgId     int64 `json:"org_id"`
-	Role      Role `json:"role"`
+	OrgId     int64  `json:"org_id"`
+	Role      Role   `json:"role"`
 	CustomValidator `json:"-"`
 }
 
@@ -255,7 +255,7 @@ func (us *Users) isLocked(username string) bool {
 }
 
 type UpdateUserParams struct {
-	Id        *int64 `json:"id"`
+	Id        *int64  `json:"id"`
 	FirstName *string `json:"first_name"`
 	LastName  *string `json:"last_name"`
 	Email     *string `json:"email"`
@@ -292,7 +292,7 @@ func (us *Users) Update(p UpdateUserParams) error {
 
 type AssignRoleParams struct {
 	Id   *int64 `json:"id"`
-	Role *Role `json:"role"`
+	Role *Role  `json:"role"`
 	CustomValidator `json:"-"`
 }
 
@@ -405,7 +405,7 @@ type ChangePasswordParams struct {
 	ExistingPassword string `json:"existing_password"`
 	NewPassword      string `json:"new_password"`
 	ResetToken       string `json:"reset_token"`
-	CustomValidator `json:"-"`
+	CustomValidator  `json:"-"`
 }
 
 func (va *ChangePasswordParams) Validate() error {

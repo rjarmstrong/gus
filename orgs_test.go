@@ -1,8 +1,8 @@
 package gus
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 var corg = CreateOrgParams{Name: "Trainers Inc."}

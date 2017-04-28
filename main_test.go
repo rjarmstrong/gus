@@ -1,11 +1,11 @@
 package gus
 
 import (
-	_ "github.com/mattn/go-sqlite3"
 	"database/sql"
+	_ "github.com/mattn/go-sqlite3"
 	"os"
-	"testing"
 	"runtime/debug"
+	"testing"
 	"time"
 )
 

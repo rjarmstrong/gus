@@ -2,10 +2,10 @@ package gus
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
-	"encoding/json"
 )
 
 const (

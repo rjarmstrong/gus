@@ -1,9 +1,9 @@
 package gus
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"testing"
 	"time"
 )
 
@@ -25,7 +25,7 @@ func TestUsers_Create(t *testing.T) {
 	assert.Equal(t, u.Email, cp.Email)
 
 	// List
-	users, err := us.List(ListUsersParams{OrgId:1})
+	users, err := us.List(ListUsersParams{OrgId: 1})
 	ErrIf(t, err)
 	assert.Equal(t, 1, len(users))
 	assert.Equal(t, int64(1), users[0].Id)
@@ -33,7 +33,7 @@ func TestUsers_Create(t *testing.T) {
 
 	i := 5
 	for i > 0 {
-		u, _, err = us.Create(CreateUserParams{Email:fmt.Sprintf("%d@mail.com", i) })
+		u, _, err = us.Create(CreateUserParams{Email: fmt.Sprintf("%d@mail.com", i)})
 		ErrIf(t, err)
 		i--
 	}
@@ -116,12 +116,12 @@ func TestUsers_AssignRole(t *testing.T) {
 	u, _, err := us.Create(cp)
 	ErrIf(t, err)
 	role := Role(55)
-	err = us.AssignRole(AssignRoleParams{Id:&u.Id, Role:&role})
+	err = us.AssignRole(AssignRoleParams{Id: &u.Id, Role: &role})
 	ErrIf(t, err)
 	u, err = us.Get(u.Id)
 	ErrIf(t, err)
 	assert.Equal(t, u.Role, role)
-	err = us.AssignRole(AssignRoleParams{Id:&u.Id, Role:nil})
+	err = us.AssignRole(AssignRoleParams{Id: &u.Id, Role: nil})
 	ErrIf(t, err)
 	u, err = us.Get(u.Id)
 	ErrIf(t, err)
