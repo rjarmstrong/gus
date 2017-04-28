@@ -155,6 +155,6 @@ func TestUsers_Lock(t *testing.T) {
 	assert.False(t, us.isLocked(username))
 	assert.False(t, us.isLocked(username))
 	assert.True(t, us.isLocked(username))
-	time.Sleep(time.Millisecond * time.Duration(1001))
+	time.Sleep(time.Millisecond * time.Duration(1010))
 	assert.False(t, us.isLocked(username))
 }
