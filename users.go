@@ -298,6 +298,9 @@ func (va *AssignRoleParams) Validate() error {
 	if va.CustomValidator != nil {
 		return va.CustomValidator()
 	}
+	if va.Role == nil {
+		return ErrInvalid("A 'role' is required. Supply '0' for no permissions.")
+	}
 	return nil
 }
 
