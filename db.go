@@ -79,6 +79,7 @@ type ListArgs struct {
 	Page      int     `json:"page"`      // Zero-indexed page
 	OrderBy   string  `json:"sort_by"`   // Order by comma separated columns
 	Direction SortDir `json:"direction"` // ASC or DESC
+	Deleted   bool    `json:"deleted"`   // Include deleted in results
 }
 
 func (p *ListArgs) ApplyDefaults() {
