@@ -105,6 +105,23 @@ func TestUsers_Delete(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestUsers_AssignRole(t *testing.T) {
+	cp.Email = "assign@mail.com"
+	u, _, err := us.Create(cp)
+	ErrIf(t, err)
+	role := Role(55)
+	err = us.AssignRole(AssignRoleParams{Id:&u.Id, Role:&role})
+	ErrIf(t, err)
+	u, err = us.Get(u.Id)
+	ErrIf(t, err)
+	assert.Equal(t, u.Role, role)
+	err = us.AssignRole(AssignRoleParams{Id:&u.Id, Role:nil})
+	ErrIf(t, err)
+	u, err = us.Get(u.Id)
+	ErrIf(t, err)
+	assert.Equal(t, u.Role, Role(0))
+}
+
 func TestUsers_Suspend(t *testing.T) {
 	cp.Email = "suspend@mail.com"
 	u, tempPassword, err := us.Create(cp)

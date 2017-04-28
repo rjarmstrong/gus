@@ -258,7 +258,6 @@ type UpdateUserParams struct {
 	LastName  *string `json:"last_name"`
 	Email     *string `json:"email"`
 	Phone     *string `json:"phone"`
-	Role      *Role `json:"role"`
 	CustomValidator `json:"-"`
 }
 
@@ -286,6 +285,37 @@ func (us *Users) Update(p UpdateUserParams) error {
 	if err != nil && err.Error() == ERR_STRING_EMAIL_CONSTRAINT {
 		return ErrEmailTaken
 	}
+	return err
+}
+
+type AssignRoleParams struct {
+	Id        *int64 `json:"id"`
+	Role      *Role `json:"role"`
+	CustomValidator `json:"-"`
+}
+
+func (va *AssignRoleParams) Validate() error {
+	if va.CustomValidator != nil {
+		return va.CustomValidator()
+	}
+	return nil
+}
+
+func (us *Users) AssignRole(p AssignRoleParams) error {
+	u, err := us.Get(*p.Id)
+	if err != nil {
+		return err
+	}
+	stmt, err := us.db.Prepare("UPDATE users SET role = ?, updated = ? WHERE id = ? AND deleted = 0")
+	if err != nil {
+		return err
+	}
+	if p.Role == nil {
+		u.Role = 0
+	} else {
+		u.Role = *p.Role
+	}
+	err = CheckUpdated(stmt.Exec(u.Role, time.Now(), u.Id))
 	return err
 }
 
