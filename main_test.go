@@ -1,7 +1,6 @@
 package gus
 
 import (
-	//_ "github.com/mattn/go-sqlite3"
 	_ "github.com/go-sql-driver/mysql"
 	"os"
 	"runtime/debug"
@@ -13,10 +12,11 @@ import (
 var orgsv *Orgs
 var us *Users
 
+// TestMain to get started spin up mysql:
+// `docker run --rm --name gus-db -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -p 127.0.0.1:3306:3306 -d mysql:5.7.18`
 func TestMain(m *testing.M) {
-	// docker run --rm --name gus-db -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -p 127.0.0.1:3306:3306 -d mysql:5.7.18
-	conn := fmt.Sprintf("%s:%s@tcp(127.0.0.1:%s)/gus?parseTime=true&multiStatements=true", "root", "", "3306")
-	db, err := GetDb(DbOpts{Seed: true, DataSourceName:conn, DriverName:"mysql"})
+	dsn := fmt.Sprintf("%s:%s@tcp(127.0.0.1:%s)/gus?parseTime=true&multiStatements=true", "root", "", "3306")
+	db, err := GetDb(DbOpts{Seed: true, DriverName: "mysql", DataSourceName: dsn})
 	defer db.Close()
 	if err != nil {
 		panic(err)

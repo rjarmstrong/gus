@@ -22,11 +22,14 @@ type DbOpts struct {
 	SeedSql        []string // Additional DDL or seed data.
 }
 
+var driverName string
+
 // Gets the sql database handle for the database specified in the DriverName options parameter.
 func GetDb(o DbOpts) (*sql.DB, error) {
 	if o.DriverName == "" {
 		o.DriverName = "sqlite3"
 	}
+	driverName = o.DriverName
 	db, err := sql.Open(o.DriverName, o.DataSourceName)
 	if err != nil {
 		return nil, err
@@ -42,7 +45,7 @@ func GetDb(o DbOpts) (*sql.DB, error) {
 
 // Seed executes sql prior to app start. Not to be exposed to client apis.
 func Seed(db *sql.DB, xtraSeedSql ...string) error {
-	_, err := db.Exec(fmt.Sprintf("%s\n%s", SeedMySql, strings.Join(xtraSeedSql, "\n")))
+	_, err := db.Exec(fmt.Sprintf("%s\n%s", seeds[driverName], strings.Join(xtraSeedSql, "\n")))
 	if err != nil {
 		return err
 	}
@@ -133,6 +136,11 @@ func GetRows(db *sql.DB, query string, lp ListArgs, args ...interface{}) (*sql.R
 		return nil, err
 	}
 	return rows, err
+}
+
+var seeds = map[string]string{
+	"mysql":   SeedMySql,
+	"sqlite3": SeedSqlLite,
 }
 
 const SeedMySql = `
