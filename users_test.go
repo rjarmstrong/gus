@@ -54,7 +54,7 @@ func TestUsers_Create(t *testing.T) {
 		ListArgs: ListArgs{Size: 20, Page: 0, OrderBy: "id", Direction: DirectionDesc},
 	})
 	ErrIf(t, err)
-	assert.Equal(t, int64(6), users[0].Id)
+	assert.Equal(t, int64(7), users[0].Id)
 
 	// Order by id asc
 	users, err = us.List(ListUsersParams{
@@ -136,6 +136,7 @@ func TestUsers_Suspend(t *testing.T) {
 	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})
 	ErrIf(t, err)
 	err = us.Suspend(id)
+	ErrIf(t, err)
 	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})
 	assert.Error(t, err)
 	err = us.Restore(id)

@@ -14,6 +14,7 @@ const (
 	DirectionDesc             SortDir = "DESC"
 )
 
+
 type DbOpts struct {
 	DriverName     string   // Optional will use sqlite3 by default.
 	DataSourceName string   // Optional will use './gus.db' by default.
@@ -25,9 +26,6 @@ type DbOpts struct {
 func GetDb(o DbOpts) (*sql.DB, error) {
 	if o.DriverName == "" {
 		o.DriverName = "sqlite3"
-	}
-	if o.DataSourceName == "" {
-		o.DataSourceName = "./gus.db"
 	}
 	db, err := sql.Open(o.DriverName, o.DataSourceName)
 	if err != nil {
@@ -44,7 +42,7 @@ func GetDb(o DbOpts) (*sql.DB, error) {
 
 // Seed executes sql prior to app start. Not to be exposed to client apis.
 func Seed(db *sql.DB, xtraSeedSql ...string) error {
-	_, err := db.Exec(fmt.Sprintf("%s\n%s", DDL, strings.Join(xtraSeedSql, "\n")))
+	_, err := db.Exec(fmt.Sprintf("%s\n%s", SeedMySql, strings.Join(xtraSeedSql, "\n")))
 	if err != nil {
 		return err
 	}
@@ -137,7 +135,57 @@ func GetRows(db *sql.DB, query string, lp ListArgs, args ...interface{}) (*sql.R
 	return rows, err
 }
 
-const DDL = `
+const SeedMySql = `
+DROP TABLE IF EXISTS users;
+
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    uid VARCHAR(36) NULL,
+    username VARCHAR(128) NULL,
+    email VARCHAR(128) NULL,
+    first_name VARCHAR(128) NULL,
+    last_name VARCHAR(128) NULL,
+    phone VARCHAR(30) NULL,
+    password_hash VARCHAR(256) NULL,
+    org_id INT,
+    updated DATE NOT NULL,
+    created DATE NOT NULL,
+    suspended tinyint(4),
+    deleted tinyint(4),
+    role INT,
+    CONSTRAINT UC_Email UNIQUE (email)
+);
+
+DROP TABLE IF EXISTS password_resets;
+CREATE TABLE password_resets (
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    email VARCHAR(128) NULL,
+    reset_token VARCHAR(256) NULL,
+    created DATE NOT NULL,
+    deleted tinyint(4)
+);
+
+DROP TABLE IF EXISTS password_attempts;
+CREATE TABLE password_attempts (
+    username VARCHAR(250),
+    created INT NOT NULL
+);
+
+DROP TABLE IF EXISTS orgs;
+CREATE TABLE orgs (
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(128) NOT NULL,
+    type INT,
+    created DATE NOT NULL,
+    updated DATE NOT NULL,
+    suspended tinyint(4),
+    deleted tinyint(4)
+);
+
+`
+
+const SeedSqlLite = `
 DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
@@ -184,6 +232,5 @@ CREATE TABLE orgs (
     suspended BIT,
     deleted BIT
 );
-
 
 `

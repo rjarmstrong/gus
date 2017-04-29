@@ -68,10 +68,12 @@ func (us *Orgs) Get(id int64) (*Org, error) {
 	}
 	row := stmt.QueryRow(id)
 	var u Org
-	err = CheckNotFound(row.Scan(&u.Id, &u.Name, &u.Type, &u.Created, &u.Updated, &u.Suspended))
+	var suspended int8
+	err = CheckNotFound(row.Scan(&u.Id, &u.Name, &u.Type, &u.Created, &u.Updated, &suspended))
 	if err != nil {
 		return nil, err
 	}
+	u.Suspended = suspended > 0
 	return &u, err
 }
 
@@ -132,7 +134,9 @@ func (us *Orgs) List(p ListOrgsParams) ([]*Org, error) {
 	ogs := []*Org{}
 	for rows.Next() {
 		u := &Org{}
-		rows.Scan(&u.Id, &u.Name, &u.Type, &u.Created, &u.Updated, &u.Suspended)
+		var suspended int
+		rows.Scan(&u.Id, &u.Name, &u.Type, &u.Created, &u.Updated, &suspended)
+		u.Suspended = suspended > 0
 		ogs = append(ogs, u)
 	}
 	if err = rows.Err(); err != nil {

@@ -6,6 +6,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"golang.org/x/crypto/bcrypt"
 	"time"
+	"strings"
 )
 
 const (
@@ -137,6 +138,7 @@ func (us *Users) Create(p CreateUserParams) (*User, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
+
 	u := &User{Uid: "", Username: p.Email, Email: p.Email, FirstName: p.FirstName, LastName: p.LastName, Phone: p.Phone,
 		OrgId:  p.OrgId, Created: time.Now(), Updated: time.Now(), Role: p.Role, Suspended: false}
 
@@ -151,7 +153,7 @@ func (us *Users) Create(p CreateUserParams) (*User, string, error) {
 		u.Updated, u.Created, 0, u.Role,
 		u.Suspended)
 	if err != nil {
-		if err.Error() == ERR_STRING_EMAIL_CONSTRAINT {
+		if strings.Contains(err.Error(), "Duplicate entry") {
 			return nil, "", ErrEmailTaken
 		}
 		return nil, "", err
@@ -171,11 +173,13 @@ func (us *Users) Get(id int64) (*User, error) {
 	}
 	row := stmt.QueryRow(id)
 	var u User
+	var suspended int
 	err = CheckNotFound(row.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId,
-		&u.Created, &u.Updated, &u.Role, &u.Suspended))
+		&u.Created, &u.Updated, &u.Role, &suspended))
 	if err != nil {
 		return nil, err
 	}
+	u.Suspended = suspended > 0
 	return &u, err
 }
 
@@ -189,11 +193,13 @@ func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error)
 	var u User
 	var passwordHash string
 	var orgSuspended bool
+	var suspended int
 	err = CheckNotFound(row.Scan(&passwordHash, &u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone,
-		&u.OrgId, &u.Created, &u.Updated, &u.Role, &u.Suspended, &orgSuspended))
+		&u.OrgId, &u.Created, &u.Updated, &u.Role, &suspended, &orgSuspended))
 	if err != nil {
 		return nil, "", err
 	}
+	u.Suspended = suspended > 0
 	c := &UserWithClaims{User: &u, Claims: &Claims{OrgId: u.OrgId, Role: u.Role, OrgSuspended: orgSuspended}}
 	return c, passwordHash, err
 }
@@ -317,7 +323,7 @@ func (us *Users) Update(p UpdateUserParams) error {
 		return err
 	}
 	err = CheckUpdated(stmt.Exec(u.FirstName, u.LastName, u.Email, u.Phone, time.Now(), u.Id))
-	if err != nil && err.Error() == ERR_STRING_EMAIL_CONSTRAINT {
+	if err != nil && strings.Contains(err.Error(), "Duplicate entry") { // ERR_STRING_EMAIL_CONSTRAINT) {
 		return ErrEmailTaken
 	}
 	return err
@@ -379,7 +385,7 @@ func (va *ListUsersParams) Validate() error {
 }
 
 func (us *Users) List(p ListUsersParams) ([]*User, error) {
-	q := "SELECT id, uid, username, email, first_name, last_name, phone, org_id, created, updated, role from users WHERE 1"
+	q := "SELECT id, uid, username, email, first_name, last_name, phone, org_id, created, updated, role, suspended from users WHERE 1"
 	args := []interface{}{}
 	if !p.Deleted {
 		q += " AND deleted = 0"
@@ -395,7 +401,9 @@ func (us *Users) List(p ListUsersParams) ([]*User, error) {
 	users := []*User{}
 	for rows.Next() {
 		u := &User{}
-		rows.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &u.Created, &u.Updated, &u.Role)
+		var suspended int
+		rows.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &u.Created, &u.Updated, &u.Role, suspended)
+		u.Suspended = suspended > 0
 		users = append(users, u)
 	}
 	if err = rows.Err(); err != nil {
