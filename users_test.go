@@ -133,17 +133,17 @@ func TestUsers_Suspend(t *testing.T) {
 	u, tempPassword, err := us.Create(cp)
 	id := u.Id
 	ErrIf(t, err)
-	_, err = us.Authenticate(SignInParams{Email: cp.Email, Password: tempPassword})
+	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})
 	ErrIf(t, err)
 	err = us.Suspend(id)
-	_, err = us.Authenticate(SignInParams{Email: cp.Email, Password: tempPassword})
+	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})
 	assert.Error(t, err)
 	err = us.Restore(id)
 	ErrIf(t, err)
-	_, err = us.Authenticate(SignInParams{Email: cp.Email, Password: tempPassword})
+	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})
 	ErrIf(t, err)
 	ErrIf(t, orgsv.Suspend(cp.OrgId))
-	_, err = us.Authenticate(SignInParams{Email: cp.Email, Password: tempPassword})
+	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})
 	assert.Error(t, err)
 }
 

@@ -94,12 +94,13 @@ func NewCreateUserParams() CreateUserParams {
 }
 
 type CreateUserParams struct {
-	Email     string `json:"email"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Phone     string `json:"phone"`
-	OrgId     int64  `json:"org_id"`
-	Role      Role   `json:"role"`
+	Email      string `json:"email"`
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	Phone      string `json:"phone"`
+	OrgId      int64  `json:"org_id"`
+	Role       Role   `json:"role"`
+	InviteCode string `json:"invite_code"`
 	CustomValidator `json:"-"`
 }
 
@@ -123,20 +124,32 @@ func hashPassword(password string) (string, error) {
 
 // Create returns a user, random password and [error]
 func (us *Users) Create(p CreateUserParams) (*User, string, error) {
-	stmt, err := us.db.Prepare("INSERT INTO users(email, first_name, last_name, phone, password_hash, org_id, updated, created, deleted, role, suspended) values(?,?,?,?,?,?,?,?,?,?,?)")
+	stmt, err := us.db.Prepare("INSERT INTO users(" +
+		"username, uid, email, first_name, " +
+		"last_name, phone, password_hash, org_id, " +
+		"updated, created, deleted, role, " +
+		"suspended) " +
+		"values(" +
+		"?,?,?,?," +
+		"?,?,?,?," +
+		"?,?,?,?," +
+		"?)")
 	if err != nil {
 		return nil, "", err
 	}
-	u := &User{Email: p.Email, FirstName: p.FirstName, LastName: p.LastName, Phone: p.Phone,
-		OrgId:    p.OrgId, Created: time.Now(), Updated: time.Now(), Role: p.Role, Suspended: false}
+	u := &User{Uid: "", Username: p.Email, Email: p.Email, FirstName: p.FirstName, LastName: p.LastName, Phone: p.Phone,
+		OrgId:  p.OrgId, Created: time.Now(), Updated: time.Now(), Role: p.Role, Suspended: false}
 
 	password := us.UserOpts.PassGen(us.UserOpts.PassGenLength)
 	hash, err := hashPassword(password)
 	if err != nil {
 		return nil, "", err
 	}
-
-	res, err := stmt.Exec(u.Email, u.FirstName, u.LastName, u.Phone, hash, u.OrgId, u.Updated, u.Created, 0, u.Role, u.Suspended)
+	res, err := stmt.Exec(
+		u.Username, u.Uid, u.Email, u.FirstName,
+		u.LastName, u.Phone, hash, u.OrgId,
+		u.Updated, u.Created, 0, u.Role,
+		u.Suspended)
 	if err != nil {
 		if err.Error() == ERR_STRING_EMAIL_CONSTRAINT {
 			return nil, "", ErrEmailTaken
@@ -152,13 +165,13 @@ func (us *Users) Create(p CreateUserParams) (*User, string, error) {
 }
 
 func (us *Users) Get(id int64) (*User, error) {
-	stmt, err := us.db.Prepare("SELECT id, email, first_name, last_name, phone, org_id, created, updated, role, suspended from users WHERE id =  ? AND deleted = 0 LIMIT 1")
+	stmt, err := us.db.Prepare("SELECT id, uid, username, email, first_name, last_name, phone, org_id, created, updated, role, suspended from users WHERE id =  ? AND deleted = 0 LIMIT 1")
 	if err != nil {
 		return nil, err
 	}
 	row := stmt.QueryRow(id)
 	var u User
-	err = CheckNotFound(row.Scan(&u.Id, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId,
+	err = CheckNotFound(row.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId,
 		&u.Created, &u.Updated, &u.Role, &u.Suspended))
 	if err != nil {
 		return nil, err
@@ -166,8 +179,44 @@ func (us *Users) Get(id int64) (*User, error) {
 	return &u, err
 }
 
+// GetByUsername returns a user by username (or email) as well as a password hash.
+func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error) {
+	stmt, err := us.db.Prepare("SELECT u.password_hash, u.id, u.uid, u.username, u.email, u.first_name, u.last_name, u.phone, u.org_id, u.created, u.updated, u.role, u.suspended, COALESCE(o.suspended, 0) from users u left join orgs o on u.org_id = o.id WHERE u.email = ? OR u.username = ? AND u.deleted = 0 LIMIT 1")
+	if err != nil {
+		return nil, "", err
+	}
+	row := stmt.QueryRow(username, username)
+	var u User
+	var passwordHash string
+	var orgSuspended bool
+	err = CheckNotFound(row.Scan(&passwordHash, &u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone,
+		&u.OrgId, &u.Created, &u.Updated, &u.Role, &u.Suspended, &orgSuspended))
+	if err != nil {
+		return nil, "", err
+	}
+	c := &UserWithClaims{User: &u, Claims: &Claims{OrgId: u.OrgId, Role: u.Role, OrgSuspended: orgSuspended}}
+	return c, passwordHash, err
+}
+
+type RegisterParams struct {
+	Email      string `json:"email"`
+	Username   string `json:"username"`
+	InviteCode string `json:"invite_code"`
+	Password   string `json:"password"`
+}
+
+func (us *Users) Register(p RegisterParams) (*UserWithClaims, error) {
+	// Check username and email don't exist
+	// Generate password
+	// Generate uuid
+	// Check invite code
+	// Create user
+	return nil, nil
+}
+
 type SignInParams struct {
 	Email    string `json:"email"`
+	Username string `json:"username"`
 	Password string `json:"password"`
 	CustomValidator `json:"-"`
 }
@@ -179,39 +228,23 @@ func (va *SignInParams) Validate() error {
 	if govalidator.IsNull(va.Password) {
 		return ErrPasswordRequired
 	}
-	if govalidator.IsNull(va.Email) {
+	if govalidator.IsNull(va.Username) {
 		return ErrEmailRequired
 	}
-	if !govalidator.IsEmail(va.Email) {
+	if !govalidator.IsEmail(va.Username) {
 		return ErrEmailInvalid
 	}
 	return nil
 }
 
-// GetByUsername returns a user and password hash
-func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error) {
-	stmt, err := us.db.Prepare("SELECT u.password_hash, u.id, u.email, u.first_name, u.last_name, u.phone, u.org_id, u.created, u.updated, u.role, u.suspended, COALESCE(o.suspended, 0) from users u left join orgs o on u.org_id = o.id WHERE u.email = ? AND u.deleted = 0 LIMIT 1")
-	if err != nil {
-		return nil, "", err
-	}
-	row := stmt.QueryRow(username)
-	var u User
-	var passwordHash string
-	var orgSuspended bool
-	err = CheckNotFound(row.Scan(&passwordHash, &u.Id, &u.Email, &u.FirstName, &u.LastName, &u.Phone,
-		&u.OrgId, &u.Created, &u.Updated, &u.Role, &u.Suspended, &orgSuspended))
-	if err != nil {
-		return nil, "", err
-	}
-	c := &UserWithClaims{User: &u, Claims: &Claims{OrgId: u.OrgId, Role: u.Role, OrgSuspended: orgSuspended}}
-	return c, passwordHash, err
-}
-
-func (us *Users) Authenticate(p SignInParams) (*UserWithClaims, error) {
-	if us.isLocked(p.Email) {
+func (us *Users) SignIn(p SignInParams) (*UserWithClaims, error) {
+	if us.isLocked(p.Username) {
 		return nil, &RateLimitExceededError{Messages: []string{"Too many sign-in attempts try again later."}}
 	}
-	u, hash, err := us.GetByUsername(p.Email)
+	if p.Username == "" {
+		p.Username = p.Email
+	}
+	u, hash, err := us.GetByUsername(p.Username)
 	if err != nil {
 		_, ok := err.(*NotFoundError)
 		if ok {
@@ -221,7 +254,7 @@ func (us *Users) Authenticate(p SignInParams) (*UserWithClaims, error) {
 	}
 	Debug(fmt.Sprintf("CLAIMS: %+v", *u.Claims))
 	if u.Suspended || u.OrgSuspended {
-		Debug("FAILED ATTEMPT:", us.isLocked(p.Email))
+		Debug("FAILED ATTEMPT:", us.isLocked(p.Username))
 		return nil, ErrNotAuth
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(p.Password))
@@ -346,7 +379,7 @@ func (va *ListUsersParams) Validate() error {
 }
 
 func (us *Users) List(p ListUsersParams) ([]*User, error) {
-	q := "SELECT id, email, first_name, last_name, phone, org_id, created, updated, role from users WHERE 1"
+	q := "SELECT id, uid, username, email, first_name, last_name, phone, org_id, created, updated, role from users WHERE 1"
 	args := []interface{}{}
 	if !p.Deleted {
 		q += " AND deleted = 0"
@@ -362,7 +395,7 @@ func (us *Users) List(p ListUsersParams) ([]*User, error) {
 	users := []*User{}
 	for rows.Next() {
 		u := &User{}
-		rows.Scan(&u.Id, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &u.Created, &u.Updated, &u.Role)
+		rows.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &u.Created, &u.Updated, &u.Role)
 		users = append(users, u)
 	}
 	if err = rows.Err(); err != nil {
@@ -435,7 +468,7 @@ func (va *ChangePasswordParams) Validate() error {
 
 func (us *Users) ChangePassword(p ChangePasswordParams) error {
 	if p.ExistingPassword != "" {
-		_, err := us.Authenticate(SignInParams{Email: p.Email, Password: p.ExistingPassword})
+		_, err := us.SignIn(SignInParams{Username: p.Email, Password: p.ExistingPassword})
 		if err != nil {
 			return err
 		}

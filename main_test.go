@@ -15,6 +15,7 @@ var db *sql.DB
 
 func TestMain(m *testing.M) {
 	db, err := GetDb(DbOpts{Seed: true})
+	defer db.Close()
 	if err != nil {
 		panic(err)
 	}

@@ -142,6 +142,8 @@ DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid VARCHAR(36) NULL,
+    username VARCHAR(128) NULL,
     email VARCHAR(128) NULL,
     first_name VARCHAR(128) NULL,
     last_name VARCHAR(128) NULL,
