@@ -263,7 +263,7 @@ func (va *SignInParams) Validate() error {
 	if govalidator.IsNull(va.Password) {
 		return ErrPasswordRequired
 	}
-	if !govalidator.IsEmail(va.Username) || !govalidator.IsNull(va.Username) {
+	if !govalidator.IsEmail(va.Username) && !govalidator.IsNull(va.Username) {
 		return ErrUsernameOrEmailRequired
 	}
 	return nil
