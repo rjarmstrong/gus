@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"time"
 	"strings"
+	"github.com/satori/go.uuid"
 )
 
 const (
@@ -139,7 +140,7 @@ func (us *Users) Create(p CreateUserParams) (*User, string, error) {
 		return nil, "", err
 	}
 
-	u := &User{Uid: "", Username: p.Email, Email: p.Email, FirstName: p.FirstName, LastName: p.LastName, Phone: p.Phone,
+	u := &User{Uid: uuid.NewV4().String(), Username: p.Email, Email: p.Email, FirstName: p.FirstName, LastName: p.LastName, Phone: p.Phone,
 		OrgId:  p.OrgId, Created: time.Now(), Updated: time.Now(), Role: p.Role, Suspended: false}
 
 	password := us.UserOpts.PassGen(us.UserOpts.PassGenLength)
@@ -171,16 +172,7 @@ func (us *Users) Get(id int64) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	row := stmt.QueryRow(id)
-	var u User
-	var suspended int
-	err = CheckNotFound(row.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId,
-		&u.Created, &u.Updated, &u.Role, &suspended))
-	if err != nil {
-		return nil, err
-	}
-	u.Suspended = suspended > 0
-	return &u, err
+	return scanUser(stmt.QueryRow(id))
 }
 
 // GetByUsername returns a user by username (or email) as well as a password hash.
@@ -359,8 +351,7 @@ func (us *Users) AssignRole(p AssignRoleParams) error {
 	} else {
 		u.Role = *p.Role
 	}
-	err = CheckUpdated(stmt.Exec(u.Role, time.Now(), u.Id))
-	return err
+	return CheckUpdated(stmt.Exec(u.Role, time.Now(), u.Id))
 }
 
 func (us *Users) Delete(id int64) error {
@@ -507,4 +498,23 @@ func (us *Users) ChangePassword(p ChangePasswordParams) error {
 	}
 	_, err = stmt.Exec(hash, time.Now(), p.Email)
 	return nil
+}
+
+func scanUser(row *sql.Row) (*User, error) {
+	var u User
+	var suspended int
+	err := row.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId,
+		&u.Created, &u.Updated, &u.Role, &suspended)
+	u.Suspended = suspended > 0
+	return CheckRows(&u, err)
+}
+
+func CheckRows(u *User, e error) (*User, error) {
+	if e != nil {
+		if e == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, e
+	}
+	return u, nil
 }
