@@ -130,12 +130,14 @@ func TestUsers_AssignRole(t *testing.T) {
 	assert.Equal(t, u.Role, Role(0))
 }
 
-func TestUsers_Suspend(t *testing.T) {
+func TestUsers_SignIn(t *testing.T) {
 	cp.Email = "suspend@mail.com"
 	u, tempPassword, err := us.SignUp(cp)
 	id := u.Id
 	ErrIf(t, err)
 	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})
+	ErrIf(t, err)
+	_, err = us.SignIn(SignInParams{Email: cp.Email, Password: tempPassword})
 	ErrIf(t, err)
 	err = us.Suspend(id)
 	ErrIf(t, err)

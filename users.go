@@ -15,13 +15,15 @@ const (
 )
 
 var (
-	ErrEmailTaken        error = ErrInvalid("That email is taken.")
-	ErrUsernameTaken     error = ErrInvalid("That username is taken.")
-	ErrEmailInvalid      error = ErrInvalid("'email' invalid.")
-	ErrEmailRequired     error = ErrInvalid("'email' required.")
-	ErrPasswordRequired  error = ErrInvalid("'password' required.")
-	ErrInvalidResetToken error = ErrInvalid("Invalid reset token.")
-	ErrPasswordInvalid   error = ErrInvalid(
+	ErrEmailTaken              error = ErrInvalid("That email is taken.")
+	ErrUsernameTaken           error = ErrInvalid("That username is taken.")
+	ErrEmailInvalid            error = ErrInvalid("'email' invalid.")
+	ErrEmailRequired           error = ErrInvalid("'email' required.")
+	ErrUsernameRequired        error = ErrInvalid("'username' required.")
+	ErrUsernameOrEmailRequired error = ErrInvalid("'username' or 'email' required.")
+	ErrPasswordRequired        error = ErrInvalid("'password' required.")
+	ErrInvalidResetToken       error = ErrInvalid("Invalid reset token.")
+	ErrPasswordInvalid         error = ErrInvalid(
 		"'new_password' must contain: 1 Upper, 1 Lower, 1 Number and 8 Chars",
 		"OR any alphanumeric with a minimum of 15 chars.")
 	ResetTokenExpirySeconds int64
@@ -36,6 +38,7 @@ type UserOpts struct {
 	PassGen          PasswordGen   // A function used to generate passwords and reset tokens
 	PassGenLength    int           // When a random password is generated when a user is created by another user
 	// (as opposed to registered) this is the length of the generated password length.
+	UsernameIsEmail *bool // When true (default) the username is the email address. When false the username can be specified independently. In either scenario both can be used to sign in with the password.
 }
 
 type User struct {
@@ -78,6 +81,10 @@ func NewUsers(db *sql.DB, opt UserOpts) *Users {
 	}
 	if opt.PassGenLength == 0 {
 		opt.PassGenLength = 15
+	}
+	if opt.UsernameIsEmail == nil {
+		t := true
+		opt.UsernameIsEmail = &t
 	}
 	return &Users{
 		db:        db,
@@ -180,7 +187,7 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	if p.Username == "" {
+	if *us.UserOpts.UsernameIsEmail || p.Username == "" {
 		p.Username = p.Email
 	}
 	u := &User{
@@ -256,21 +263,18 @@ func (va *SignInParams) Validate() error {
 	if govalidator.IsNull(va.Password) {
 		return ErrPasswordRequired
 	}
-	if govalidator.IsNull(va.Username) {
-		return ErrEmailRequired
-	}
-	if !govalidator.IsEmail(va.Username) {
-		return ErrEmailInvalid
+	if !govalidator.IsEmail(va.Username) || !govalidator.IsNull(va.Username) {
+		return ErrUsernameOrEmailRequired
 	}
 	return nil
 }
 
 func (us *Users) SignIn(p SignInParams) (*UserWithClaims, error) {
+	if p.Email != "" && *us.UsernameIsEmail {
+		p.Username = p.Email
+	}
 	if us.isLocked(p.Username) {
 		return nil, &RateLimitExceededError{Messages: []string{"Too many sign-in attempts try again later."}}
-	}
-	if p.Username == "" {
-		p.Username = p.Email
 	}
 	u, hash, err := us.GetByUsername(p.Username)
 	if err != nil {
