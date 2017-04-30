@@ -14,7 +14,6 @@ const (
 	DirectionDesc             SortDir = "DESC"
 )
 
-
 type DbOpts struct {
 	DriverName     string   // Optional will use sqlite3 by default.
 	DataSourceName string   // Optional will use './gus.db' by default.
@@ -22,7 +21,15 @@ type DbOpts struct {
 	SeedSql        []string // Additional DDL or seed data.
 }
 
-var driverName string
+var (
+	driverName string
+	sqlCheck   = regexp.MustCompile("^[A-Za-z.]+$")
+	sqlErr     = ErrInvalid("Invalid order params.")
+	seeds      = map[string]string{
+		"mysql":   SeedMySql,
+		"sqlite3": SeedSqlLite,
+	}
+)
 
 // Gets the sql database handle for the database specified in the DriverName options parameter.
 func GetDb(o DbOpts) (*sql.DB, error) {
@@ -110,9 +117,6 @@ func ApplyUpdates(original interface{}, updates interface{}) error {
 	return nil
 }
 
-var sqlCheck = regexp.MustCompile("^[A-Za-z.]+$")
-var sqlErr = ErrInvalid("Invalid order params.")
-
 // GetRows returns a *sql.Rows iterator after adding limit and offset, results are sorted by default 'updated' desc.
 // Sql added sample: + ' ORDER by updated DESC LIMIT 20 OFFSET 1'
 func GetRows(db *sql.DB, query string, lp ListArgs, args ...interface{}) (*sql.Rows, error) {
@@ -137,108 +141,3 @@ func GetRows(db *sql.DB, query string, lp ListArgs, args ...interface{}) (*sql.R
 	}
 	return rows, err
 }
-
-var seeds = map[string]string{
-	"mysql":   SeedMySql,
-	"sqlite3": SeedSqlLite,
-}
-
-const SeedMySql = `
-DROP TABLE IF EXISTS users;
-
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTO_INCREMENT,
-    uid VARCHAR(36) NULL,
-    username VARCHAR(128) NULL,
-    email VARCHAR(128) NULL,
-    first_name VARCHAR(128) NULL,
-    last_name VARCHAR(128) NULL,
-    phone VARCHAR(30) NULL,
-    password_hash VARCHAR(256) NULL,
-    org_id INT,
-    updated DATE NOT NULL,
-    created DATE NOT NULL,
-    suspended tinyint(4),
-    deleted tinyint(4),
-    role INT,
-    CONSTRAINT UC_Email UNIQUE (email)
-);
-
-DROP TABLE IF EXISTS password_resets;
-CREATE TABLE password_resets (
-    id INTEGER PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    email VARCHAR(128) NULL,
-    reset_token VARCHAR(256) NULL,
-    created DATE NOT NULL,
-    deleted tinyint(4)
-);
-
-DROP TABLE IF EXISTS password_attempts;
-CREATE TABLE password_attempts (
-    username VARCHAR(250),
-    created INT NOT NULL
-);
-
-DROP TABLE IF EXISTS orgs;
-CREATE TABLE orgs (
-    id INTEGER PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(128) NOT NULL,
-    type INT,
-    created DATE NOT NULL,
-    updated DATE NOT NULL,
-    suspended tinyint(4),
-    deleted tinyint(4)
-);
-
-`
-
-const SeedSqlLite = `
-DROP TABLE IF EXISTS users;
-
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    uid VARCHAR(36) NULL,
-    username VARCHAR(128) NULL,
-    email VARCHAR(128) NULL,
-    first_name VARCHAR(128) NULL,
-    last_name VARCHAR(128) NULL,
-    phone VARCHAR(30) NULL,
-    password_hash VARCHAR(256) NULL,
-    org_id INT,
-    updated DATE NOT NULL,
-    created DATE NOT NULL,
-    suspended BIT,
-    deleted BIT,
-    role INT,
-    CONSTRAINT UC_Email UNIQUE (email)
-);
-
-DROP TABLE IF EXISTS password_resets;
-CREATE TABLE password_resets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INT NOT NULL,
-    email VARCHAR(128) NULL,
-    reset_token VARCHAR(256) NULL,
-    created DATE NOT NULL,
-    deleted BIT
-);
-
-DROP TABLE IF EXISTS password_attempts;
-CREATE TABLE password_attempts (
-    username VARCHAR(250),
-    created INT NOT NULL
-);
-
-DROP TABLE IF EXISTS orgs;
-CREATE TABLE orgs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(128) NOT NULL,
-    type INT,
-    created DATE NOT NULL,
-    updated DATE NOT NULL,
-    suspended BIT,
-    deleted BIT
-);
-
-`

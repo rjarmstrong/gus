@@ -7,16 +7,16 @@ import (
 	"time"
 )
 
-var cp = CreateUserParams{Email: "user@mail.com", OrgId: 1}
+var cp = SignUpParams{Email: "user@mail.com", OrgId: 1}
 
 func TestUsers_Create(t *testing.T) {
-	u, _, err := us.Create(cp)
+	u, _, err := us.SignUp(cp)
 	ErrIf(t, err)
 	assert.Equal(t, u.Email, cp.Email)
 	assert.True(t, u.Id > 0)
 
 	// Should not allow create for existing email
-	_, _, err = us.Create(cp)
+	_, _, err = us.SignUp(cp)
 	assert.Error(t, err)
 
 	// Get
@@ -33,7 +33,7 @@ func TestUsers_Create(t *testing.T) {
 
 	i := 5
 	for i > 0 {
-		u, _, err = us.Create(CreateUserParams{Email: fmt.Sprintf("%d@mail.com", i)})
+		u, _, err = us.SignUp(SignUpParams{Email: fmt.Sprintf("%d@mail.com", i)})
 		ErrIf(t, err)
 		i--
 	}
@@ -54,7 +54,7 @@ func TestUsers_Create(t *testing.T) {
 		ListArgs: ListArgs{Size: 20, Page: 0, OrderBy: "id", Direction: DirectionDesc},
 	})
 	ErrIf(t, err)
-	assert.Equal(t, int64(7), users[0].Id)
+	assert.Equal(t, int64(6), users[0].Id)
 
 	// Order by id asc
 	users, err = us.List(ListUsersParams{
@@ -66,7 +66,7 @@ func TestUsers_Create(t *testing.T) {
 
 func TestUsers_Update(t *testing.T) {
 	cp.Email = "update@mail.com"
-	u, _, err := us.Create(cp)
+	u, _, err := us.SignUp(cp)
 	ErrIf(t, err)
 	email := "donkey@kong.com"
 	fname := "Donkey"
@@ -82,8 +82,10 @@ func TestUsers_Update(t *testing.T) {
 	assert.Equal(t, cp.LastName, u.LastName)
 
 	// Should not update to existing email
-	u, _, err = us.Create(cp)
-	up.Id = &u.Id
+	cp.Email = "update2@mail.com"
+	u2, _, err := us.SignUp(cp)
+	ErrIf(t, err)
+	up.Id = &u2.Id
 	err = us.Update(up)
 	assert.Error(t, err)
 
@@ -96,7 +98,7 @@ func TestUsers_Update(t *testing.T) {
 
 func TestUsers_Delete(t *testing.T) {
 	cp.Email = "delete@mail.com"
-	u, _, err := us.Create(cp)
+	u, _, err := us.SignUp(cp)
 	id := u.Id
 	ErrIf(t, err)
 	err = us.Delete(id)
@@ -113,7 +115,7 @@ func TestUsers_Delete(t *testing.T) {
 
 func TestUsers_AssignRole(t *testing.T) {
 	cp.Email = "assign@mail.com"
-	u, _, err := us.Create(cp)
+	u, _, err := us.SignUp(cp)
 	ErrIf(t, err)
 	role := Role(55)
 	err = us.AssignRole(AssignRoleParams{Id: &u.Id, Role: &role})
@@ -130,7 +132,7 @@ func TestUsers_AssignRole(t *testing.T) {
 
 func TestUsers_Suspend(t *testing.T) {
 	cp.Email = "suspend@mail.com"
-	u, tempPassword, err := us.Create(cp)
+	u, tempPassword, err := us.SignUp(cp)
 	id := u.Id
 	ErrIf(t, err)
 	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})

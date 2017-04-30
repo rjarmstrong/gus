@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/asaskevich/govalidator"
-	"golang.org/x/crypto/bcrypt"
-	"time"
-	"strings"
 	"github.com/satori/go.uuid"
+	"golang.org/x/crypto/bcrypt"
+	"strings"
+	"time"
 )
 
 const (
@@ -16,6 +16,7 @@ const (
 
 var (
 	ErrEmailTaken        error = ErrInvalid("That email is taken.")
+	ErrUsernameTaken     error = ErrInvalid("That username is taken.")
 	ErrEmailInvalid      error = ErrInvalid("'email' invalid.")
 	ErrEmailRequired     error = ErrInvalid("'email' required.")
 	ErrPasswordRequired  error = ErrInvalid("'password' required.")
@@ -30,10 +31,10 @@ var (
 type Role int64
 
 type UserOpts struct {
-	MaxAuthAttempts     int           // Maximum amount of times a user can attempt to login with a given username.
-	AttemptLockDuration time.Duration // Duration which the user will be locked out if MaxAuthAttempts has been exceeded.
-	PassGen             PasswordGen   // A function used to generate passwords and reset tokens
-	PassGenLength       int           // When a random password is generated when a user is created by another user
+	MaxAuthAttempts  int           // Maximum amount of times a user can attempt to login with a given username.
+	AuthLockDuration time.Duration // Duration which the user will be locked out if MaxAuthAttempts has been exceeded.
+	PassGen          PasswordGen   // A function used to generate passwords and reset tokens
+	PassGenLength    int           // When a random password is generated when a user is created by another user
 	// (as opposed to registered) this is the length of the generated password length.
 }
 
@@ -69,8 +70,8 @@ type UserWithToken struct {
 }
 
 func NewUsers(db *sql.DB, opt UserOpts) *Users {
-	if opt.AttemptLockDuration == 0 {
-		opt.AttemptLockDuration = time.Duration(5) * time.Minute
+	if opt.AuthLockDuration == 0 {
+		opt.AuthLockDuration = time.Duration(5) * time.Minute
 	}
 	if opt.PassGen == nil {
 		opt.PassGen = RandStringBytesMaskImprSrc
@@ -91,22 +92,28 @@ type Users struct {
 	UserOpts
 }
 
-func NewCreateUserParams() CreateUserParams {
-	return CreateUserParams{}
+func hashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
 }
 
-type CreateUserParams struct {
+type SignUpParams struct {
+	Username   string `json:"username"`
+	InviteCode string `json:"invite_code"`
+	Password   string `json:"password"`
 	Email      string `json:"email"`
 	FirstName  string `json:"first_name"`
 	LastName   string `json:"last_name"`
 	Phone      string `json:"phone"`
 	OrgId      int64  `json:"org_id"`
 	Role       Role   `json:"role"`
-	InviteCode string `json:"invite_code"`
 	CustomValidator `json:"-"`
 }
 
-func (va *CreateUserParams) Validate() error {
+func (va *SignUpParams) Validate() error {
 	if va.CustomValidator != nil {
 		return va.CustomValidator()
 	}
@@ -116,53 +123,92 @@ func (va *CreateUserParams) Validate() error {
 	return nil
 }
 
-func hashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
-	if err != nil {
-		return "", err
-	}
-	return string(hash), nil
+type ExistsParams struct {
+	Email    string `json:"email"`
+	Username string `json:"username"`
 }
 
-// Create returns a user, random password and [error]
-func (us *Users) Create(p CreateUserParams) (*User, string, error) {
-	stmt, err := us.db.Prepare("INSERT INTO users(" +
+// Exists returns true only if we know for certain that the email and username don't exists, otherwise we assume they might exist or they definitely exists if the error indicates as such.
+func (us *Users) Exists(p ExistsParams) (bool, error) {
+	tx, err := us.db.Begin()
+	if err != nil {
+		return true, err
+	}
+	return us.exists(tx, p)
+}
+
+func (us *Users) exists(tx *sql.Tx, p ExistsParams) (bool, error) {
+	existingQ, err := tx.Prepare("SELECT username, email FROM users WHERE deleted = 0 AND username = ? OR email = ?")
+	if err != nil {
+		return true, err
+	}
+	existing, err := scanUser(existingQ.QueryRow(p.Username, p.Email))
+	if err.Error() != ErrNotFound.Error() {
+		return true, err
+	}
+	if existing != nil {
+		if strings.ToLower(existing.Email) == strings.ToLower(p.Email) {
+			return true, ErrEmailTaken
+		}
+		if strings.ToLower(existing.Username) == strings.ToLower(p.Username) {
+			return true, ErrUsernameTaken
+		}
+	}
+	return false, nil
+}
+
+// SignUp returns a user, random password and [error]
+func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
+	tx, err := us.db.Begin()
+	if err != nil {
+		return nil, "", err
+	}
+	exists, err := us.exists(tx, ExistsParams{Username: p.Username, Email: p.Email})
+	if exists {
+		return nil, "", err
+	}
+	stmt, err := tx.Prepare("INSERT INTO users(" +
 		"username, uid, email, first_name, " +
 		"last_name, phone, password_hash, org_id, " +
 		"updated, created, deleted, role, " +
-		"suspended) " +
+		"suspended, invite_code) " +
 		"values(" +
 		"?,?,?,?," +
 		"?,?,?,?," +
 		"?,?,?,?," +
-		"?)")
+		"?, ?)")
 	if err != nil {
 		return nil, "", err
 	}
-
-	u := &User{Uid: uuid.NewV4().String(), Username: p.Email, Email: p.Email, FirstName: p.FirstName, LastName: p.LastName, Phone: p.Phone,
-		OrgId:  p.OrgId, Created: time.Now(), Updated: time.Now(), Role: p.Role, Suspended: false}
+	if p.Username == "" {
+		p.Username = p.Email
+	}
+	u := &User{
+		Uid:      uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
+		LastName: p.LastName, Phone: p.Phone, OrgId: p.OrgId, Created: time.Now(),
+		Updated:  time.Now(), Role: p.Role, Suspended: false}
 
 	password := us.UserOpts.PassGen(us.UserOpts.PassGenLength)
 	hash, err := hashPassword(password)
 	if err != nil {
+		tx.Rollback()
 		return nil, "", err
 	}
 	res, err := stmt.Exec(
 		u.Username, u.Uid, u.Email, u.FirstName,
 		u.LastName, u.Phone, hash, u.OrgId,
 		u.Updated, u.Created, 0, u.Role,
-		u.Suspended)
+		u.Suspended, p.InviteCode)
 	if err != nil {
-		if strings.Contains(err.Error(), "Duplicate entry") {
-			return nil, "", ErrEmailTaken
-		}
+		tx.Rollback()
 		return nil, "", err
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
+		tx.Rollback()
 		return nil, "", err
 	}
+	tx.Commit()
 	u.Id = id
 	return u, password, nil
 }
@@ -194,22 +240,6 @@ func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error)
 	u.Suspended = suspended > 0
 	c := &UserWithClaims{User: &u, Claims: &Claims{OrgId: u.OrgId, Role: u.Role, OrgSuspended: orgSuspended}}
 	return c, passwordHash, err
-}
-
-type RegisterParams struct {
-	Email      string `json:"email"`
-	Username   string `json:"username"`
-	InviteCode string `json:"invite_code"`
-	Password   string `json:"password"`
-}
-
-func (us *Users) Register(p RegisterParams) (*UserWithClaims, error) {
-	// Check username and email don't exist
-	// Generate password
-	// Generate uuid
-	// Check invite code
-	// Create user
-	return nil, nil
 }
 
 type SignInParams struct {
@@ -262,6 +292,12 @@ func (us *Users) SignIn(p SignInParams) (*UserWithClaims, error) {
 	return u, nil
 }
 
+// isLocked will prevent users from authenticating if they have attempted to or signed in more than n times
+// within the AuthLockDuration time. e.g. if the AuthLockDuration is 600 seconds and the MaxAuthAttempts is
+// 5 they will be locked out when attempting to sign in immediately after the 5th attempt. Since the lock is
+// 'sliding' they will not usually have to wait the full AuthLockDuration, just until there are no more than 5
+// attempts in last 600 seconds. The effective sign-in rate would thus be 1 'sign in' per minute or one burst of 5
+// 'sign ins' every 5 minutes.
 func (us *Users) isLocked(username string) bool {
 	stmt, err := us.db.Prepare("INSERT into password_attempts (username, created) values (?, ?)")
 	_, err = stmt.Exec(username, time.Now().Unix())
@@ -271,7 +307,7 @@ func (us *Users) isLocked(username string) bool {
 		return true
 	}
 
-	since := time.Now().Unix() - int64(us.AttemptLockDuration/time.Second)
+	since := time.Now().Unix() - int64(us.AuthLockDuration/time.Second)
 	Debug("SINCE:", since)
 	row := us.db.QueryRow("SELECT COUNT(username) FROM password_attempts WHERE created > ? AND username = ?", since, username)
 	var count int
