@@ -17,7 +17,7 @@ const (
 	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
 )
 
-type PasswordGen func(n int) string
+type PasswordGen func(n int64) string
 
 // RandStringBytesMask use only for dev purposes to create predictable rand passwords since the source is constant.
 func RandStringBytesMask(n int) string {
@@ -33,7 +33,7 @@ func RandStringBytesMask(n int) string {
 
 var src = rand.NewSource(time.Now().UnixNano())
 
-func RandStringBytesMaskImprSrc(n int) string {
+func RandStringBytesMaskImprSrc(n int64) string {
 	b := make([]byte, n)
 	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
 		if remain == 0 {

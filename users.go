@@ -33,10 +33,10 @@ var (
 type Role int64
 
 type UserOpts struct {
-	MaxAuthAttempts  int           // Maximum amount of times a user can attempt to login with a given username.
+	AuthAttempts     int64         // Maximum amount of times a user can attempt to login with a given username.
 	AuthLockDuration time.Duration // Duration which the user will be locked out if MaxAuthAttempts has been exceeded.
 	PassGen          PasswordGen   // A function used to generate passwords and reset tokens
-	PassGenLength    int           // When a random password is generated when a user is created by another user
+	PassGenLength    int64         // When a random password is generated when a user is created by another user
 	// (as opposed to registered) this is the length of the generated password length.
 	UsernameIsEmail *bool // When true (default) the username is the email address. When false the username can be specified independently. In either scenario both can be used to sign in with the password.
 }
@@ -314,15 +314,15 @@ func (us *Users) isLocked(username string) bool {
 	since := time.Now().Unix() - int64(us.AuthLockDuration/time.Second)
 	Debug("SINCE:", since)
 	row := us.db.QueryRow("SELECT COUNT(username) FROM password_attempts WHERE created > ? AND username = ?", since, username)
-	var count int
+	var count int64
 	err = row.Scan(&count)
 	if err != nil {
 		LogErr(err)
 		// Lock the account regardless
 		return true
 	}
-	Debug("ATTEMPTS:", count, "max:", us.MaxAuthAttempts)
-	return count > us.MaxAuthAttempts
+	Debug("ATTEMPTS:", count, "max:", us.AuthAttempts)
+	return count > us.AuthAttempts
 }
 
 type UpdateUserParams struct {
