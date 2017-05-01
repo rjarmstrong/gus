@@ -20,9 +20,9 @@ const (
 type PasswordGen func(n int64) string
 
 // RandStringBytesMask use only for dev purposes to create predictable rand passwords since the source is constant.
-func RandStringBytesMask(n int) string {
+func RandStringBytesMask(n int64) string {
 	b := make([]byte, n)
-	for i := 0; i < n; {
+	for i := int64(0); i < n; {
 		if idx := int(rand.Int63() & letterIdxMask); idx < len(letterBytes) {
 			b[i] = letterBytes[idx]
 			i++
