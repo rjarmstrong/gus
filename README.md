@@ -31,9 +31,23 @@ Get started
 go get github.com/kwk-super-snippets/gus 
 ```
 
+Set-up database
+---
+```bash
+docker run --rm --name mysql -e MYSQL_ROOT_PASSWORD=rootPassword -p 127.0.0.1:3306:3306 -d mysql:5.7.18
+```
+Once the local instance is running create a new database:
+```bash
+docker exec mysql mysql -u root -prootPassword -e "CREATE DATABASE gus2"
+```
+| Note: In production don't use the password on the CLI and create a web user with a good password.
+
+Integrate with package
+---
 ```go
  // Min config
- o := gus.DbOptions{DataSourceName: "./my.db", Seed: true}
+ dsn := fmt.Sprintf("%s:%s@tcp(127.0.0.1:%s)/gus?parseTime=true&multiStatements=true", "root", "", "3306")
+ o := gus.DbOptions{DataSourceName: dsn, Seed: true}
  db = gus.GetDb(o)
  users := gus.NewUsers(db)
 	
