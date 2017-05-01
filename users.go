@@ -194,9 +194,13 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 		Uid:      uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
 		LastName: p.LastName, Phone: p.Phone, OrgId: p.OrgId, Created: time.Now(),
 		Updated:  time.Now(), Role: p.Role, Suspended: false}
-
-	password := us.UserOpts.PassGen(us.UserOpts.PassGenLength)
-	hash, err := hashPassword(password)
+	var givenPassword bool
+	if p.Password == "" {
+		p.Password = us.UserOpts.PassGen(us.UserOpts.PassGenLength)
+	} else {
+		givenPassword = true
+	}
+	hash, err := hashPassword(p.Password)
 	if err != nil {
 		tx.Rollback()
 		return nil, "", err
@@ -217,7 +221,10 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 	}
 	tx.Commit()
 	u.Id = id
-	return u, password, nil
+	if givenPassword {
+		return u, "", nil
+	}
+	return u, p.Password, nil
 }
 
 func (us *Users) Get(id int64) (*User, error) {
@@ -263,15 +270,20 @@ func (va *SignInParams) Validate() error {
 	if govalidator.IsNull(va.Password) {
 		return ErrPasswordRequired
 	}
-	if !govalidator.IsEmail(va.Username) && !govalidator.IsNull(va.Username) {
+	if !govalidator.IsEmail(va.Username) && govalidator.IsNull(va.Username) {
 		return ErrUsernameOrEmailRequired
 	}
 	return nil
 }
 
 func (us *Users) SignIn(p SignInParams) (*UserWithClaims, error) {
-	if p.Email != "" && *us.UsernameIsEmail {
-		p.Username = p.Email
+	if p.Email != "" {
+		if *us.UsernameIsEmail {
+			p.Username = p.Email
+		}
+		if p.Username == "" {
+			p.Username = p.Email
+		}
 	}
 	if us.isLocked(p.Username) {
 		return nil, &RateLimitExceededError{Messages: []string{"Too many sign-in attempts try again later."}}
@@ -291,6 +303,7 @@ func (us *Users) SignIn(p SignInParams) (*UserWithClaims, error) {
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(p.Password))
 	if err != nil {
+		LogErr(err)
 		return nil, ErrNotAuth
 	}
 	return u, nil

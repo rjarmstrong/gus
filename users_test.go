@@ -9,7 +9,7 @@ import (
 
 var cp = SignUpParams{Email: "user@mail.com", OrgId: 1}
 
-func TestUsers_Create(t *testing.T) {
+func TestUsers_SignUp(t *testing.T) {
 	u, _, err := us.SignUp(cp)
 	ErrIf(t, err)
 	assert.Equal(t, u.Email, cp.Email)
@@ -131,7 +131,20 @@ func TestUsers_AssignRole(t *testing.T) {
 }
 
 func TestUsers_SignIn(t *testing.T) {
-	cp.Email = "suspend@mail.com"
+	// With a given password
+	cp.Email = "given-pword@mail.com"
+	cp.Password = "M0nk3yNutz5"
+	u, givenPassword, err := us.SignUp(cp)
+	ErrIf(t, err)
+	assert.Equal(t, "", givenPassword)
+	_, err = us.SignIn(SignInParams{Email: cp.Email, Password: cp.Password})
+	ErrIf(t, err)
+	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: cp.Password})
+	ErrIf(t, err)
+
+	// With a generated password
+	cp.Email = "generated@mail.com"
+	cp.Password = ""
 	u, tempPassword, err := us.SignUp(cp)
 	id := u.Id
 	ErrIf(t, err)
@@ -139,6 +152,8 @@ func TestUsers_SignIn(t *testing.T) {
 	ErrIf(t, err)
 	_, err = us.SignIn(SignInParams{Email: cp.Email, Password: tempPassword})
 	ErrIf(t, err)
+
+	// Suspend
 	err = us.Suspend(id)
 	ErrIf(t, err)
 	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})
