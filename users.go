@@ -317,6 +317,10 @@ func (us *Users) SignIn(p SignInParams) (*UserWithClaims, error) {
 // 'sign ins' every 5 minutes.
 func (us *Users) isLocked(username string) bool {
 	stmt, err := us.db.Prepare("INSERT into password_attempts (username, created) values (?, ?)")
+	if err != nil {
+		LogErr(err)
+		return true
+	}
 	_, err = stmt.Exec(username, time.Now().Unix())
 	if err != nil {
 		LogErr(err)
