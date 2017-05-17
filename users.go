@@ -145,21 +145,25 @@ func (us *Users) Exists(p ExistsParams) (bool, error) {
 }
 
 func (us *Users) exists(tx *sql.Tx, p ExistsParams) (bool, error) {
-	existingQ, err := tx.Prepare("SELECT username, email FROM users WHERE deleted = 0 AND username = ? OR email = ?")
+	existingQ, err := tx.Prepare("SELECT username, email  FROM users WHERE deleted = 0 AND username = ? OR email = ?")
 	if err != nil {
 		return true, err
 	}
-	existing, err := scanUser(existingQ.QueryRow(p.Username, p.Email))
-	if err.Error() != ErrNotFound.Error() {
+
+	var username, email string
+	err = existingQ.QueryRow(p.Username, p.Email).Scan(&username, &email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
 		return true, err
 	}
-	if existing != nil {
-		if strings.ToLower(existing.Email) == strings.ToLower(p.Email) {
-			return true, ErrEmailTaken
-		}
-		if strings.ToLower(existing.Username) == strings.ToLower(p.Username) {
-			return true, ErrUsernameTaken
-		}
+
+	if strings.ToLower(email) == strings.ToLower(p.Email) {
+		return true, ErrEmailTaken
+	}
+	if strings.ToLower(username) == strings.ToLower(p.Username) {
+		return true, ErrUsernameTaken
 	}
 	return false, nil
 }
