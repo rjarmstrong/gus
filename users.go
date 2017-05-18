@@ -24,7 +24,7 @@ var (
 	ErrPasswordRequired        error = ErrInvalid("'password' required.")
 	ErrInvalidResetToken       error = ErrInvalid("Invalid reset token.")
 	ErrPasswordInvalid         error = ErrInvalid(
-		"'new_password' must contain: 1 Upper, 1 Lower, 1 Number and 8 Chars",
+		"'new_password' must contain: 1 Upper, 1 Lower, 1 Number, 1 Special and 8 Chars",
 		"OR any alphanumeric with a minimum of 15 chars.")
 	ResetTokenExpirySeconds int64
 	ResetTokenExpiryKey     = "RESET_TOKEN_EXPIRY"
