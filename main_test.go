@@ -19,7 +19,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	orgsv = NewOrgs(db)
-	us = NewUsers(db, UserOpts{AuthAttempts: 5, AuthLockDuration: 1 })
+	us = NewUsers(db, UserOpts{AuthAttempts: 5, AuthLockDuration: 1, ResetTokenExpiry: 1 })
 	code := m.Run()
 	os.Exit(code)
 }

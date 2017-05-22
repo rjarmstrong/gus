@@ -204,11 +204,19 @@ func TestUsers_PasswordReset(t *testing.T) {
 	ErrIf(t, err)
 	assert.Equal(t, email, uc.Email)
 
+	// RESET TOKEN EXPIRED
+	token, err = us.ResetPassword(ResetPasswordParams{Email:email})
+	ErrIf(t, err)
+	time.Sleep(time.Millisecond*time.Duration(1500))
+	newP3 := "sdfASDF34&8DFsdf"
+	err = us.ChangePassword(ChangePasswordParams{Email:email, ResetToken:token, NewPassword:newP3})
+	assert.Equal(t, &NotFoundError{}, err)
+
 	// INVALID TOKEN
 	token, err = us.ResetPassword(ResetPasswordParams{Email:email})
 	ErrIf(t, err)
-	newP3 := "sdf23@348DFsdf"
-	err = us.ChangePassword(ChangePasswordParams{Email:email, ResetToken:token + "ADSF", NewPassword:newP3})
+	newP4 := "sdf23@348DFsdf"
+	err = us.ChangePassword(ChangePasswordParams{Email:email, ResetToken:token + "ADSF", NewPassword:newP4})
 	assert.Equal(t, ErrInvalidResetToken,  err)
 	uc, err = us.SignIn(SignInParams{Username:u.Email, Password:newP2})
 	ErrIf(t, err)

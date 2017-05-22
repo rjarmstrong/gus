@@ -26,19 +26,18 @@ var (
 	ErrPasswordInvalid         error = ErrInvalid(
 		"'new_password' must contain: 1 Upper, 1 Lower, 1 Number, 1 Special and 8 Chars",
 		"OR any alphanumeric with a minimum of 15 chars.")
-	ResetTokenExpirySeconds int64
-	ResetTokenExpiryKey     = "RESET_TOKEN_EXPIRY"
 )
 
 type Role int64
 
 type UserOpts struct {
-	AuthAttempts     int64         // Maximum amount of times a user can attempt to login with a given username.
+	AuthAttempts     int64         	// Maximum amount of times a user can attempt to login with a given username.
 	AuthLockDuration int64 		// Seconds which the user will be locked out if MaxAuthAttempts has been exceeded.
-	PassGen          PasswordGen   // A function used to generate passwords and reset tokens
-	PassGenLength    int64         // When a random password is generated when a user is created by another user
+	PassGen          PasswordGen   	// A function used to generate passwords and reset tokens
+	PassGenLength    int64         	// When a random password is generated when a user is created by another user
 	// (as opposed to registered) this is the length of the generated password length.
-	UsernameIsEmail *bool // When true (default) the username is the email address. When false the username can be specified independently. In either scenario both can be used to sign in with the password.
+	UsernameIsEmail *bool 		// When true (default) the username is the email address. When false the username can be specified independently. In either scenario both can be used to sign in with the password.
+	ResetTokenExpiry int64 		// ResetTokenExpiry Seconds before token expired
 }
 
 type User struct {
@@ -534,9 +533,9 @@ func (us *Users) ChangePassword(p ChangePasswordParams) error {
 	}
 	if p.ResetToken != "" {
 		stmt, err := us.db.Prepare(
-			"SELECT reset_token FROM password_resets where email = ? and UNIX_TIMESTAMP(NOW()) < (created+?) and deleted = 0 " +
+			"SELECT reset_token FROM password_resets where email = ? and (1000*UNIX_TIMESTAMP(NOW())) < (created+?) and deleted = 0 " +
 				"ORDER BY created DESC LIMIT 1")
-		row := stmt.QueryRow(p.Email, ResetTokenExpirySeconds*1000)
+		row := stmt.QueryRow(p.Email, us.ResetTokenExpiry*1000)
 		var resetToken string
 		err = CheckNotFound(row.Scan(&resetToken))
 		if err != nil {
