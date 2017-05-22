@@ -34,7 +34,7 @@ type Role int64
 
 type UserOpts struct {
 	AuthAttempts     int64         // Maximum amount of times a user can attempt to login with a given username.
-	AuthLockDuration time.Duration // Duration which the user will be locked out if MaxAuthAttempts has been exceeded.
+	AuthLockDuration int64 		// Seconds which the user will be locked out if MaxAuthAttempts has been exceeded.
 	PassGen          PasswordGen   // A function used to generate passwords and reset tokens
 	PassGenLength    int64         // When a random password is generated when a user is created by another user
 	// (as opposed to registered) this is the length of the generated password length.
@@ -50,8 +50,8 @@ type User struct {
 	LastName  string    `json:"last_name"`
 	Phone     string    `json:"phone"`
 	OrgId     int64     `json:"org_id"`
-	Updated   time.Time `json:"updated"`
-	Created   time.Time `json:"created"`
+	Updated   int64 `json:"updated"`
+	Created   int64 `json:"created"`
 	Role      Role      `json:"role"`
 	Suspended bool      `json:"suspended"`
 }
@@ -74,7 +74,7 @@ type UserWithToken struct {
 
 func NewUsers(db *sql.DB, opt UserOpts) *Users {
 	if opt.AuthLockDuration == 0 {
-		opt.AuthLockDuration = time.Duration(5) * time.Minute
+		opt.AuthLockDuration = 5*60
 	}
 	if opt.PassGen == nil {
 		opt.PassGen = RandStringBytesMaskImprSrc
@@ -196,8 +196,8 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 	}
 	u := &User{
 		Uid:      uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
-		LastName: p.LastName, Phone: p.Phone, OrgId: p.OrgId, Created: time.Now(),
-		Updated:  time.Now(), Role: p.Role, Suspended: false}
+		LastName: p.LastName, Phone: p.Phone, OrgId: p.OrgId, Created: milliseconds(time.Now()),
+		Updated:  milliseconds(time.Now()), Role: p.Role, Suspended: false}
 	var givenPassword bool
 	if p.Password == "" {
 		p.Password = us.UserOpts.PassGen(us.UserOpts.PassGenLength)
@@ -325,15 +325,14 @@ func (us *Users) isLocked(username string) bool {
 		LogErr(err)
 		return true
 	}
-	_, err = stmt.Exec(username, time.Now().Unix())
+	_, err = stmt.Exec(username, milliseconds(time.Now()))
 	if err != nil {
 		LogErr(err)
 		// Lock the account regardless
 		return true
 	}
 
-	since := time.Now().Unix() - int64(us.AuthLockDuration/time.Second)
-	Debug("SINCE:", since)
+	since := (time.Now().Unix() - us.AuthLockDuration) * 1000
 	row := us.db.QueryRow("SELECT COUNT(username) FROM password_attempts WHERE created > ? AND username = ?", since, username)
 	var count int64
 	err = row.Scan(&count)
@@ -375,7 +374,7 @@ func (us *Users) Update(p UpdateUserParams) error {
 	if err != nil {
 		return err
 	}
-	err = CheckUpdated(stmt.Exec(u.FirstName, u.LastName, u.Email, u.Phone, time.Now(), u.Id))
+	err = CheckUpdated(stmt.Exec(u.FirstName, u.LastName, u.Email, u.Phone, milliseconds(time.Now()), u.Id))
 	if err != nil && strings.Contains(err.Error(), "Duplicate entry") { // ERR_STRING_EMAIL_CONSTRAINT) {
 		return ErrEmailTaken
 	}
@@ -412,7 +411,7 @@ func (us *Users) AssignRole(p AssignRoleParams) error {
 	} else {
 		u.Role = *p.Role
 	}
-	return CheckUpdated(stmt.Exec(u.Role, time.Now(), u.Id))
+	return CheckUpdated(stmt.Exec(u.Role, milliseconds(time.Now()), u.Id))
 }
 
 func (us *Users) Delete(id int64) error {
@@ -420,7 +419,7 @@ func (us *Users) Delete(id int64) error {
 	if err != nil {
 		return err
 	}
-	return CheckUpdated(stmt.Exec(time.Now(), id))
+	return CheckUpdated(stmt.Exec(milliseconds(time.Now()), id))
 }
 
 type ListUsersParams struct {
@@ -489,7 +488,7 @@ func (us *Users) ResetPassword(p ResetPasswordParams) (string, error) {
 	}
 	token := us.PassGen(256)
 	stmt, err := us.db.Prepare("INSERT into password_resets (user_id, email, reset_token, created, deleted) values (?, ?, ?, ?, ?)")
-	_, err = stmt.Exec(u.Id, u.Email, token, time.Now(), 0)
+	_, err = stmt.Exec(u.Id, u.Email, token, milliseconds(time.Now()), 0)
 	if err != nil {
 		return "", err
 	}
@@ -535,10 +534,9 @@ func (us *Users) ChangePassword(p ChangePasswordParams) error {
 	}
 	if p.ResetToken != "" {
 		stmt, err := us.db.Prepare(
-			"SELECT reset_token FROM password_resets where email = ? and created > ? and deleted = 0 " +
+			"SELECT reset_token FROM password_resets where email = ? and UNIX_TIMESTAMP(NOW()) < (created+?) and deleted = 0 " +
 				"ORDER BY created DESC LIMIT 1")
-		exp := time.Now().Add(-time.Second * time.Duration(ResetTokenExpirySeconds))
-		row := stmt.QueryRow(p.Email, exp)
+		row := stmt.QueryRow(p.Email, ResetTokenExpirySeconds*1000)
 		var resetToken string
 		err = CheckNotFound(row.Scan(&resetToken))
 		if err != nil {
@@ -557,7 +555,7 @@ func (us *Users) ChangePassword(p ChangePasswordParams) error {
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(hash, time.Now(), p.Email)
+	_, err = stmt.Exec(hash, milliseconds(time.Now()), p.Email)
 	return nil
 }
 

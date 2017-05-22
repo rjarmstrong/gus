@@ -20,8 +20,8 @@ type Org struct {
 	Id        int64     `json:"id"`
 	Name      string    `json:"name"`
 	Type      OrgType   `json:"type"`
-	Updated   time.Time `json:"updated"`
-	Created   time.Time `json:"created"`
+	Updated   int64 `json:"updated"`
+	Created   int64 `json:"created"`
 	Suspended bool      `json:"suspended"`
 }
 
@@ -51,8 +51,11 @@ func (us *Orgs) Create(p CreateOrgParams) (*Org, error) {
 	if err != nil {
 		return nil, err
 	}
-	u := &Org{Name: p.Name, Type: p.Type, Created: time.Now(), Updated: time.Now()}
+	u := &Org{Name: p.Name, Type: p.Type, Created: milliseconds(time.Now()), Updated: milliseconds(time.Now())}
 	res, err := stmt.Exec(u.Name, u.Type, u.Updated, u.Created, 0, false)
+	if err != nil {
+		return nil, err
+	}
 	id, err := res.LastInsertId()
 	if err != nil {
 		return nil, err
@@ -103,7 +106,7 @@ func (us *Orgs) Update(p UpdateOrgParams) error {
 	if err != nil {
 		return err
 	}
-	err = CheckUpdated(stmt.Exec(o.Name, time.Now(), o.Id))
+	err = CheckUpdated(stmt.Exec(o.Name, milliseconds(time.Now()), o.Id))
 	if err != nil {
 		return err
 	}

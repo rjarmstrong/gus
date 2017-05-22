@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const (
@@ -13,6 +14,11 @@ const (
 	DirectionAsc              SortDir = "ASC"
 	DirectionDesc             SortDir = "DESC"
 )
+
+func milliseconds(t time.Time) int64 {
+	u := int64(time.Duration(t.UnixNano()) / time.Millisecond)
+	return u
+}
 
 type DbOpts struct {
 	DriverName     string   // Optional will use sqlite3 by default.

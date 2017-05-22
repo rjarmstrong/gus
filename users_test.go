@@ -99,6 +99,7 @@ func TestUsers_Update(t *testing.T) {
 func TestUsers_Delete(t *testing.T) {
 	cp.Email = "delete@mail.com"
 	u, _, err := us.SignUp(cp)
+	ErrIf(t, err)
 	id := u.Id
 	ErrIf(t, err)
 	err = us.Delete(id)
@@ -175,6 +176,6 @@ func TestUsers_Lock(t *testing.T) {
 	assert.False(t, us.isLocked(username))
 	assert.False(t, us.isLocked(username))
 	assert.True(t, us.isLocked(username))
-	time.Sleep(time.Millisecond * time.Duration(1010))
+	time.Sleep(time.Millisecond * time.Duration(1800))
 	assert.False(t, us.isLocked(username))
 }
