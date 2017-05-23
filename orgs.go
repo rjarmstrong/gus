@@ -17,12 +17,12 @@ func NewOrgs(db *sql.DB) *Orgs {
 }
 
 type Org struct {
-	Id        int64     `json:"id"`
-	Name      string    `json:"name"`
-	Type      OrgType   `json:"type"`
-	Updated   int64 `json:"updated"`
-	Created   int64 `json:"created"`
-	Suspended bool      `json:"suspended"`
+	Id        int64   `json:"id"`
+	Name      string  `json:"name"`
+	Type      OrgType `json:"type"`
+	Updated   int64   `json:"updated"`
+	Created   int64   `json:"created"`
+	Suspended bool    `json:"suspended"`
 }
 
 type Orgs struct {
@@ -31,8 +31,8 @@ type Orgs struct {
 }
 
 type CreateOrgParams struct {
-	Name string  `json:"name"`
-	Type OrgType `json:"type"`
+	Name            string  `json:"name"`
+	Type            OrgType `json:"type"`
 	CustomValidator `json:"-"`
 }
 
@@ -81,8 +81,8 @@ func (us *Orgs) Get(id int64) (*Org, error) {
 }
 
 type UpdateOrgParams struct {
-	Id   *int64  `json:"id"`
-	Name *string `json:"name"`
+	Id              *int64  `json:"id"`
+	Name            *string `json:"name"`
 	CustomValidator `json:"-"`
 }
 

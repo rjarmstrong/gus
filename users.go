@@ -31,28 +31,28 @@ var (
 type Role int64
 
 type UserOpts struct {
-	AuthAttempts     int64         	// Maximum amount of times a user can attempt to login with a given username.
-	AuthLockDuration int64 		// Seconds which the user will be locked out if MaxAuthAttempts has been exceeded.
-	PassGen          PasswordGen   	// A function used to generate passwords and reset tokens
-	PassGenLength    int64         	// When a random password is generated when a user is created by another user
+	AuthAttempts     int64       // Maximum amount of times a user can attempt to login with a given username.
+	AuthLockDuration int64       // Seconds which the user will be locked out if MaxAuthAttempts has been exceeded.
+	PassGen          PasswordGen // A function used to generate passwords and reset tokens
+	PassGenLength    int64       // When a random password is generated when a user is created by another user
 	// (as opposed to registered) this is the length of the generated password length.
-	UsernameIsEmail *bool 		// When true (default) the username is the email address. When false the username can be specified independently. In either scenario both can be used to sign in with the password.
-	ResetTokenExpiry int64 		// ResetTokenExpiry Seconds before token expired
+	UsernameIsEmail  *bool // When true (default) the username is the email address. When false the username can be specified independently. In either scenario both can be used to sign in with the password.
+	ResetTokenExpiry int64 // ResetTokenExpiry Seconds before token expired
 }
 
 type User struct {
-	Id        int64     `json:"id"`
-	Uid       string    `json:"uid"`      // A universally unique id such as a uuid
-	Username  string    `json:"username"` // Same as email?? If not supplied.
-	Email     string    `json:"email"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	Phone     string    `json:"phone"`
-	OrgId     int64     `json:"org_id"`
-	Updated   int64 `json:"updated"`
-	Created   int64 `json:"created"`
-	Role      Role      `json:"role"`
-	Suspended bool      `json:"suspended"`
+	Id        int64  `json:"id"`
+	Uid       string `json:"uid"`      // A universally unique id such as a uuid
+	Username  string `json:"username"` // Same as email?? If not supplied.
+	Email     string `json:"email"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Phone     string `json:"phone"`
+	OrgId     int64  `json:"org_id"`
+	Updated   int64  `json:"updated"`
+	Created   int64  `json:"created"`
+	Role      Role   `json:"role"`
+	Suspended bool   `json:"suspended"`
 }
 
 type UserWithClaims struct {
@@ -73,7 +73,7 @@ type UserWithToken struct {
 
 func NewUsers(db *sql.DB, opt UserOpts) *Users {
 	if opt.AuthLockDuration == 0 {
-		opt.AuthLockDuration = 5*60
+		opt.AuthLockDuration = 5 * 60
 	}
 	if opt.PassGen == nil {
 		opt.PassGen = RandStringBytesMaskImprSrc
@@ -107,15 +107,15 @@ func hashPassword(password string) (string, error) {
 }
 
 type SignUpParams struct {
-	Username   string `json:"username"`
-	InviteCode string `json:"invite_code"`
-	Password   string `json:"password"`
-	Email      string `json:"email"`
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	Phone      string `json:"phone"`
-	OrgId      int64  `json:"org_id"`
-	Role       Role   `json:"role"`
+	Username        string `json:"username"`
+	InviteCode      string `json:"invite_code"`
+	Password        string `json:"password"`
+	Email           string `json:"email"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name"`
+	Phone           string `json:"phone"`
+	OrgId           int64  `json:"org_id"`
+	Role            Role   `json:"role"`
 	CustomValidator `json:"-"`
 }
 
@@ -194,9 +194,9 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 		p.Username = p.Email
 	}
 	u := &User{
-		Uid:      uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
+		Uid: uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
 		LastName: p.LastName, Phone: p.Phone, OrgId: p.OrgId, Created: Milliseconds(time.Now()),
-		Updated:  Milliseconds(time.Now()), Role: p.Role, Suspended: false}
+		Updated: Milliseconds(time.Now()), Role: p.Role, Suspended: false}
 	var givenPassword bool
 	if p.Password == "" {
 		p.Password = us.UserOpts.PassGen(us.UserOpts.PassGenLength)
@@ -260,9 +260,9 @@ func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error)
 }
 
 type SignInParams struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Email           string `json:"email"`
+	Username        string `json:"username"`
+	Password        string `json:"password"`
 	CustomValidator `json:"-"`
 }
 
@@ -345,11 +345,11 @@ func (us *Users) isLocked(username string) bool {
 }
 
 type UpdateUserParams struct {
-	Id        *int64  `json:"id"`
-	FirstName *string `json:"first_name"`
-	LastName  *string `json:"last_name"`
-	Email     *string `json:"email"`
-	Phone     *string `json:"phone"`
+	Id              *int64  `json:"id"`
+	FirstName       *string `json:"first_name"`
+	LastName        *string `json:"last_name"`
+	Email           *string `json:"email"`
+	Phone           *string `json:"phone"`
 	CustomValidator `json:"-"`
 }
 
@@ -381,8 +381,8 @@ func (us *Users) Update(p UpdateUserParams) error {
 }
 
 type AssignRoleParams struct {
-	Id   *int64 `json:"id"`
-	Role *Role  `json:"role"`
+	Id              *int64 `json:"id"`
+	Role            *Role  `json:"role"`
 	CustomValidator `json:"-"`
 }
 
@@ -463,7 +463,7 @@ func (us *Users) List(p ListUsersParams) ([]*User, error) {
 }
 
 type ResetPasswordParams struct {
-	Email string `json:"email"`
+	Email           string `json:"email"`
 	CustomValidator `json:"-"`
 }
 
