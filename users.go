@@ -92,6 +92,24 @@ func NewUsers(db *sql.DB, opt UserOpts) *Users {
 	}
 }
 
+type Account interface {
+	SignUp(p SignUpParams) (*User, string, error)
+	SignIn(p SignInParams) (*UserWithClaims, error)
+	ChangePassword(p ChangePasswordParams) error
+	ResetPassword(p ResetPasswordParams) (string, error)
+	Exists(p ExistsParams) (bool, error)
+	Update(p UpdateUserParams) error
+}
+
+type UserManager interface {
+	Get(id int64) (*User, error)
+	GetByUsername(username string) (*UserWithClaims, string, error)
+	Update(p UpdateUserParams) error
+	Delete(id int64) error
+	AssignRole(p AssignRoleParams)
+	List(p ListUsersParams) ([]*User, error)
+}
+
 type Users struct {
 	db *sql.DB
 	*Suspender
