@@ -51,7 +51,7 @@ func (us *Orgs) Create(p CreateOrgParams) (*Org, error) {
 	if err != nil {
 		return nil, err
 	}
-	u := &Org{Name: p.Name, Type: p.Type, Created: milliseconds(time.Now()), Updated: milliseconds(time.Now())}
+	u := &Org{Name: p.Name, Type: p.Type, Created: Milliseconds(time.Now()), Updated: Milliseconds(time.Now())}
 	res, err := stmt.Exec(u.Name, u.Type, u.Updated, u.Created, 0, false)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (us *Orgs) Update(p UpdateOrgParams) error {
 	if err != nil {
 		return err
 	}
-	err = CheckUpdated(stmt.Exec(o.Name, milliseconds(time.Now()), o.Id))
+	err = CheckUpdated(stmt.Exec(o.Name, Milliseconds(time.Now()), o.Id))
 	if err != nil {
 		return err
 	}

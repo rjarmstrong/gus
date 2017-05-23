@@ -15,7 +15,7 @@ const (
 	DirectionDesc             SortDir = "DESC"
 )
 
-func milliseconds(t time.Time) int64 {
+func Milliseconds(t time.Time) int64 {
 	u := int64(time.Duration(t.UnixNano()) / time.Millisecond)
 	return u
 }

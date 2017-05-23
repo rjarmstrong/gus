@@ -21,7 +21,7 @@ func (su *Suspender) Suspend(id int64) error {
 		return err
 	}
 	Debug("SUSPEND:", id)
-	return CheckUpdated(stmt.Exec(milliseconds(time.Now()), id))
+	return CheckUpdated(stmt.Exec(Milliseconds(time.Now()), id))
 }
 
 func (su *Suspender) Restore(id int64) error {
@@ -29,7 +29,7 @@ func (su *Suspender) Restore(id int64) error {
 	if err != nil {
 		return err
 	}
-	return CheckUpdated(stmt.Exec(milliseconds(time.Now()), id))
+	return CheckUpdated(stmt.Exec(Milliseconds(time.Now()), id))
 }
 
 func (su *Suspender) Delete(id int64) error {
@@ -37,7 +37,7 @@ func (su *Suspender) Delete(id int64) error {
 	if err != nil {
 		return err
 	}
-	return CheckUpdated(stmt.Exec(milliseconds(time.Now()), id))
+	return CheckUpdated(stmt.Exec(Milliseconds(time.Now()), id))
 }
 
 func (su *Suspender) UnDelete(id int64) error {
@@ -45,5 +45,5 @@ func (su *Suspender) UnDelete(id int64) error {
 	if err != nil {
 		return err
 	}
-	return CheckUpdated(stmt.Exec(milliseconds(time.Now()), id))
+	return CheckUpdated(stmt.Exec(Milliseconds(time.Now()), id))
 }

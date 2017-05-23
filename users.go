@@ -195,8 +195,8 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 	}
 	u := &User{
 		Uid:      uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
-		LastName: p.LastName, Phone: p.Phone, OrgId: p.OrgId, Created: milliseconds(time.Now()),
-		Updated:  milliseconds(time.Now()), Role: p.Role, Suspended: false}
+		LastName: p.LastName, Phone: p.Phone, OrgId: p.OrgId, Created: Milliseconds(time.Now()),
+		Updated:  Milliseconds(time.Now()), Role: p.Role, Suspended: false}
 	var givenPassword bool
 	if p.Password == "" {
 		p.Password = us.UserOpts.PassGen(us.UserOpts.PassGenLength)
@@ -324,7 +324,7 @@ func (us *Users) isLocked(username string) bool {
 		LogErr(err)
 		return true
 	}
-	_, err = stmt.Exec(username, milliseconds(time.Now()))
+	_, err = stmt.Exec(username, Milliseconds(time.Now()))
 	if err != nil {
 		LogErr(err)
 		// Lock the account regardless
@@ -373,7 +373,7 @@ func (us *Users) Update(p UpdateUserParams) error {
 	if err != nil {
 		return err
 	}
-	err = CheckUpdated(stmt.Exec(u.FirstName, u.LastName, u.Email, u.Phone, milliseconds(time.Now()), u.Id))
+	err = CheckUpdated(stmt.Exec(u.FirstName, u.LastName, u.Email, u.Phone, Milliseconds(time.Now()), u.Id))
 	if err != nil && strings.Contains(err.Error(), "Duplicate entry") { // ERR_STRING_EMAIL_CONSTRAINT) {
 		return ErrEmailTaken
 	}
@@ -410,7 +410,7 @@ func (us *Users) AssignRole(p AssignRoleParams) error {
 	} else {
 		u.Role = *p.Role
 	}
-	return CheckUpdated(stmt.Exec(u.Role, milliseconds(time.Now()), u.Id))
+	return CheckUpdated(stmt.Exec(u.Role, Milliseconds(time.Now()), u.Id))
 }
 
 func (us *Users) Delete(id int64) error {
@@ -418,7 +418,7 @@ func (us *Users) Delete(id int64) error {
 	if err != nil {
 		return err
 	}
-	return CheckUpdated(stmt.Exec(milliseconds(time.Now()), id))
+	return CheckUpdated(stmt.Exec(Milliseconds(time.Now()), id))
 }
 
 type ListUsersParams struct {
@@ -487,7 +487,7 @@ func (us *Users) ResetPassword(p ResetPasswordParams) (string, error) {
 	}
 	token := us.PassGen(128)
 	stmt, err := us.db.Prepare("INSERT into password_resets (user_id, email, reset_token, created, deleted) values (?, ?, ?, ?, ?)")
-	_, err = stmt.Exec(u.Id, u.Email, token, milliseconds(time.Now()), 0)
+	_, err = stmt.Exec(u.Id, u.Email, token, Milliseconds(time.Now()), 0)
 	if err != nil {
 		return "", err
 	}
@@ -554,7 +554,7 @@ func (us *Users) ChangePassword(p ChangePasswordParams) error {
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(hash, milliseconds(time.Now()), p.Email)
+	_, err = stmt.Exec(hash, Milliseconds(time.Now()), p.Email)
 	return nil
 }
 
