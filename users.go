@@ -487,6 +487,9 @@ func (us *Users) ResetPassword(p ResetPasswordParams) (string, error) {
 	}
 	token := us.PassGen(128)
 	stmt, err := us.db.Prepare("INSERT into password_resets (user_id, email, reset_token, created, deleted) values (?, ?, ?, ?, ?)")
+	if err != nil {
+		return "", err
+	}
 	_, err = stmt.Exec(u.Id, u.Email, token, Milliseconds(time.Now()), 0)
 	if err != nil {
 		return "", err
