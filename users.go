@@ -489,11 +489,25 @@ func (us *Users) ResetPassword(p ResetPasswordParams) (string, error) {
 		return "", err
 	}
 	token := us.PassGen(128)
-	stmt, err := us.db.Prepare("INSERT into password_resets (user_id, email, reset_token, created, deleted) values (?, ?, ?, ?, ?)")
+	tx, err := us.db.Begin()
+	if err != nil {
+		return "", err
+	}
+	_, err = tx.Exec("UPDATE password_resets set deleted = 1 where email = ?", p.Email)
+	if err != nil {
+		return "", err
+	}
+	stmt, err := tx.Prepare("INSERT into password_resets (user_id, email, reset_token, created, deleted) values (?, ?, ?, ?, ?)")
 	if err != nil {
 		return "", err
 	}
 	_, err = stmt.Exec(u.Id, u.Email, token, Milliseconds(time.Now()), 0)
+	if err != nil {
+		err = tx.Rollback()
+		LogErr(err)
+		return "", err
+	}
+	err = tx.Commit()
 	if err != nil {
 		return "", err
 	}
@@ -539,16 +553,20 @@ func (us *Users) ChangePassword(p ChangePasswordParams) error {
 	}
 	if p.ResetToken != "" {
 		stmt, err := us.db.Prepare(
-			"SELECT reset_token FROM password_resets where email = ? and (1000*UNIX_TIMESTAMP(NOW())) < (created+?) and deleted = 0 " +
+			"SELECT reset_token, created FROM password_resets where email = ? and  deleted = 0 " +
 				"ORDER BY created DESC LIMIT 1")
-		row := stmt.QueryRow(p.Email, us.ResetTokenExpiry*1000)
+		row := stmt.QueryRow(p.Email)
 		var resetToken string
-		err = CheckNotFound(row.Scan(&resetToken))
+		var created int64
+		err = CheckNotFound(row.Scan(&resetToken, &created))
 		if err != nil {
 			return err
 		}
 		if resetToken != p.ResetToken {
 			return ErrInvalidResetToken
+		}
+		if Milliseconds(time.Now()) > (created + us.ResetTokenExpiry*1000) {
+			return ErrTokenExpired
 		}
 	}
 	hash, err := hashPassword(p.NewPassword)

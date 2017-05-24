@@ -214,7 +214,7 @@ func TestUsers_PasswordReset(t *testing.T) {
 	time.Sleep(time.Millisecond*time.Duration(2000))
 	newP3 := "sdfASDF34&8DFsdf"
 	err = us.ChangePassword(ChangePasswordParams{Email:email, ResetToken:token, NewPassword:newP3})
-	assert.Equal(t, &NotFoundError{}, err)
+	assert.Equal(t, ErrTokenExpired, err)
 
 	// INVALID TOKEN
 	token, err = us.ResetPassword(ResetPasswordParams{Email:email})

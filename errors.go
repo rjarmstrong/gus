@@ -7,6 +7,7 @@ var (
 	ErrNotFound        = &NotFoundError{}
 	ErrCantDeleteSelf  = ErrInvalid("You can't delete yourself.")
 	ErrCantSuspendSelf = ErrInvalid("You can't suspend yourself.")
+	ErrTokenExpired = ErrInvalid("That access token has expired.")
 )
 
 type NotAuthenticatedError struct {
