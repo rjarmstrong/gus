@@ -152,7 +152,7 @@ func TestUsers_SignIn(t *testing.T) {
 	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})
 	assert.IsType(t, ErrNotAuth, err)
 	newPass := "asdfj23£$sdfD"
-	err = us.ChangePassword(ChangePasswordParams{Email:cp.Email, ResetToken:tempPassword, NewPassword:newPass})
+	err = us.ChangePassword(ChangePasswordParams{Email: cp.Email, ResetToken: tempPassword, NewPassword: newPass})
 	ErrIf(t, err)
 	_, err = us.SignIn(SignInParams{Email: cp.Email, Password: newPass})
 	ErrIf(t, err)
@@ -188,41 +188,45 @@ func TestUsers_Lock(t *testing.T) {
 func TestUsers_PasswordReset(t *testing.T) {
 	email := "reset@mail.com"
 	password := "M0nk3yNutz5"
-	u, _, err := us.SignUp(SignUpParams{Email:email, Password:password})
+	u, _, err := us.SignUp(SignUpParams{Email: email, Password: password})
 	ErrIf(t, err)
 	newP := "newPassword1!"
-	err = us.ChangePassword(ChangePasswordParams{Email: email, ExistingPassword: password,  NewPassword: newP})
+	err = us.ChangePassword(ChangePasswordParams{Email: email, ExistingPassword: password, NewPassword: newP})
 	ErrIf(t, err)
-	uc, err := us.SignIn(SignInParams{Username:u.Email, Password:newP})
+	uc, err := us.SignIn(SignInParams{Username: u.Email, Password: newP})
 	ErrIf(t, err)
 	assert.Equal(t, email, uc.Email)
 
 	// RESET TOKEN
-	token, err := us.ResetPassword(ResetPasswordParams{Email:email})
+	token, err := us.ResetPassword(ResetPasswordParams{Email: email})
 	ErrIf(t, err)
 	assert.NotEmpty(t, token)
 	newP2 := "sdf@348DFsdf"
-	err = us.ChangePassword(ChangePasswordParams{Email:email, ResetToken:token, NewPassword:newP2})
+	err = us.ChangePassword(ChangePasswordParams{Email: email, ResetToken: token, NewPassword: newP2})
 	ErrIf(t, err)
-	uc, err = us.SignIn(SignInParams{Username:u.Email, Password:newP2})
+	uc, err = us.SignIn(SignInParams{Username: u.Email, Password: newP2})
 	ErrIf(t, err)
 	assert.Equal(t, email, uc.Email)
 
+	// CAN'T USE SAME TOKEN TWICE
+	err = us.ChangePassword(ChangePasswordParams{Email: email, ResetToken: token, NewPassword: "SSDFU23@£Dsdf"})
+	assert.IsType(t, ErrNotFound, err)
+
 	// RESET TOKEN EXPIRED
-	token, err = us.ResetPassword(ResetPasswordParams{Email:email})
+	token, err = us.ResetPassword(ResetPasswordParams{Email: email})
 	ErrIf(t, err)
-	time.Sleep(time.Millisecond*time.Duration(2000))
+	time.Sleep(time.Millisecond * time.Duration(2000))
 	newP3 := "sdfASDF34&8DFsdf"
-	err = us.ChangePassword(ChangePasswordParams{Email:email, ResetToken:token, NewPassword:newP3})
+	err = us.ChangePassword(ChangePasswordParams{Email: email, ResetToken: token, NewPassword: newP3})
 	assert.Equal(t, ErrTokenExpired, err)
 
 	// INVALID TOKEN
-	token, err = us.ResetPassword(ResetPasswordParams{Email:email})
+	token, err = us.ResetPassword(ResetPasswordParams{Email: email})
 	ErrIf(t, err)
 	newP4 := "sdf23@348DFsdf"
-	err = us.ChangePassword(ChangePasswordParams{Email:email, ResetToken:token + "ADSF", NewPassword:newP4})
-	assert.Equal(t, ErrInvalidResetToken,  err)
-	uc, err = us.SignIn(SignInParams{Username:u.Email, Password:newP2})
+	err = us.ChangePassword(ChangePasswordParams{Email: email, ResetToken: token + "ADSF", NewPassword: newP4})
+	assert.Equal(t, ErrInvalidResetToken, err)
+	uc, err = us.SignIn(SignInParams{Username: u.Email, Password: newP2})
 	ErrIf(t, err)
 	assert.Equal(t, email, uc.Email)
 }

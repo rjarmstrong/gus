@@ -35,8 +35,8 @@ type UserOpts struct {
 	AuthLockDuration int64       // Seconds which the user will be locked out if MaxAuthAttempts has been exceeded.
 	PassGen          PasswordGen // A function used to generate passwords and reset tokens
 	// (as opposed to registered) this is the length of the generated password length.
-	UsernameIsEmail       *bool // When true (default) the username is the email address. When false the username can be specified independently. In either scenario both can be used to sign in with the password.
-	ResetTokenExpiry      int64 // ResetTokenExpiry Seconds before token expired.
+	UsernameIsEmail  *bool // When true (default) the username is the email address. When false the username can be specified independently. In either scenario both can be used to sign in with the password.
+	ResetTokenExpiry int64 // ResetTokenExpiry Seconds before token expired.
 }
 
 type User struct {
@@ -103,15 +103,15 @@ func hashPassword(password string) (string, error) {
 }
 
 type SignUpParams struct {
-	Username   string `json:"username"`
-	InviteCode string `json:"invite_code"`
-	Password   string `json:"password"`
-	Email      string `json:"email"`
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	Phone      string `json:"phone"`
-	OrgId      int64  `json:"org_id"`
-	Role       Role   `json:"role"`
+	Username        string `json:"username"`
+	InviteCode      string `json:"invite_code"`
+	Password        string `json:"password"`
+	Email           string `json:"email"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name"`
+	Phone           string `json:"phone"`
+	OrgId           int64  `json:"org_id"`
+	Role            Role   `json:"role"`
 	CustomValidator `json:"-"`
 }
 
@@ -190,9 +190,9 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 		p.Username = p.Email
 	}
 	u := &User{
-		Uid:      uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
+		Uid: uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
 		LastName: p.LastName, Phone: p.Phone, OrgId: p.OrgId, Created: Milliseconds(time.Now()),
-		Updated:  Milliseconds(time.Now()), Role: p.Role, Suspended: false}
+		Updated: Milliseconds(time.Now()), Role: p.Role, Suspended: false}
 	var givenPassword bool
 	var activateToken = ""
 	if p.Password == "" {
@@ -264,9 +264,9 @@ func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error)
 }
 
 type SignInParams struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Email           string `json:"email"`
+	Username        string `json:"username"`
+	Password        string `json:"password"`
 	CustomValidator `json:"-"`
 }
 
@@ -348,11 +348,11 @@ func (us *Users) isLocked(username string) bool {
 }
 
 type UpdateUserParams struct {
-	Id        *int64  `json:"id"`
-	FirstName *string `json:"first_name"`
-	LastName  *string `json:"last_name"`
-	Email     *string `json:"email"`
-	Phone     *string `json:"phone"`
+	Id              *int64  `json:"id"`
+	FirstName       *string `json:"first_name"`
+	LastName        *string `json:"last_name"`
+	Email           *string `json:"email"`
+	Phone           *string `json:"phone"`
 	CustomValidator `json:"-"`
 }
 
@@ -384,8 +384,8 @@ func (us *Users) Update(p UpdateUserParams) error {
 }
 
 type AssignRoleParams struct {
-	Id   *int64 `json:"id"`
-	Role *Role  `json:"role"`
+	Id              *int64 `json:"id"`
+	Role            *Role  `json:"role"`
 	CustomValidator `json:"-"`
 }
 
@@ -466,7 +466,7 @@ func (us *Users) List(p ListUsersParams) ([]*User, error) {
 }
 
 type ResetPasswordParams struct {
-	Email string `json:"email"`
+	Email           string `json:"email"`
 	CustomValidator `json:"-"`
 }
 
@@ -552,7 +552,11 @@ func (us *Users) ChangePassword(p ChangePasswordParams) error {
 		}
 	}
 	if p.ResetToken != "" {
-		stmt, err := us.db.Prepare(
+		tx, err := us.db.Begin()
+		if err != nil {
+			return err
+		}
+		stmt, err := tx.Prepare(
 			"SELECT reset_token, created FROM password_resets where email = ? and  deleted = 0 " +
 				"ORDER BY created DESC LIMIT 1")
 		row := stmt.QueryRow(p.Email)
@@ -560,13 +564,25 @@ func (us *Users) ChangePassword(p ChangePasswordParams) error {
 		var created int64
 		err = CheckNotFound(row.Scan(&resetToken, &created))
 		if err != nil {
+			tx.Rollback()
 			return err
 		}
 		if resetToken != p.ResetToken {
+			tx.Rollback()
 			return ErrInvalidResetToken
 		}
 		if Milliseconds(time.Now()) > (created + us.ResetTokenExpiry*1000) {
+			tx.Rollback()
 			return ErrTokenExpired
+		}
+		_, err = tx.Exec("UPDATE password_resets set deleted = 1 WHERE email = ?", p.Email)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		err = tx.Commit()
+		if err != nil {
+			return err
 		}
 	}
 	hash, err := hashPassword(p.NewPassword)
