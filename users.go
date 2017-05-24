@@ -34,10 +34,9 @@ type UserOpts struct {
 	AuthAttempts     int64       // Maximum amount of times a user can attempt to login with a given username.
 	AuthLockDuration int64       // Seconds which the user will be locked out if MaxAuthAttempts has been exceeded.
 	PassGen          PasswordGen // A function used to generate passwords and reset tokens
-	PassGenLength    int64       // When a random password is generated when a user is created by another user
 	// (as opposed to registered) this is the length of the generated password length.
-	UsernameIsEmail  *bool // When true (default) the username is the email address. When false the username can be specified independently. In either scenario both can be used to sign in with the password.
-	ResetTokenExpiry int64 // ResetTokenExpiry Seconds before token expired
+	UsernameIsEmail       *bool // When true (default) the username is the email address. When false the username can be specified independently. In either scenario both can be used to sign in with the password.
+	ResetTokenExpiry      int64 // ResetTokenExpiry Seconds before token expired.
 }
 
 type User struct {
@@ -78,9 +77,6 @@ func NewUsers(db *sql.DB, opt UserOpts) *Users {
 	if opt.PassGen == nil {
 		opt.PassGen = RandStringBytesMaskImprSrc
 	}
-	if opt.PassGenLength == 0 {
-		opt.PassGenLength = 15
-	}
 	if opt.UsernameIsEmail == nil {
 		t := true
 		opt.UsernameIsEmail = &t
@@ -107,15 +103,15 @@ func hashPassword(password string) (string, error) {
 }
 
 type SignUpParams struct {
-	Username        string `json:"username"`
-	InviteCode      string `json:"invite_code"`
-	Password        string `json:"password"`
-	Email           string `json:"email"`
-	FirstName       string `json:"first_name"`
-	LastName        string `json:"last_name"`
-	Phone           string `json:"phone"`
-	OrgId           int64  `json:"org_id"`
-	Role            Role   `json:"role"`
+	Username   string `json:"username"`
+	InviteCode string `json:"invite_code"`
+	Password   string `json:"password"`
+	Email      string `json:"email"`
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	Phone      string `json:"phone"`
+	OrgId      int64  `json:"org_id"`
+	Role       Role   `json:"role"`
 	CustomValidator `json:"-"`
 }
 
@@ -194,12 +190,16 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 		p.Username = p.Email
 	}
 	u := &User{
-		Uid: uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
+		Uid:      uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
 		LastName: p.LastName, Phone: p.Phone, OrgId: p.OrgId, Created: Milliseconds(time.Now()),
-		Updated: Milliseconds(time.Now()), Role: p.Role, Suspended: false}
+		Updated:  Milliseconds(time.Now()), Role: p.Role, Suspended: false}
 	var givenPassword bool
+	var activateToken = ""
 	if p.Password == "" {
-		p.Password = us.UserOpts.PassGen(us.UserOpts.PassGenLength)
+		p.Password = us.UserOpts.PassGen(128)
+		if err != nil {
+			return nil, "", err
+		}
 	} else {
 		givenPassword = true
 	}
@@ -227,7 +227,11 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 	if givenPassword {
 		return u, "", nil
 	}
-	return u, p.Password, nil
+	activateToken, err = us.ResetPassword(ResetPasswordParams{Email: p.Email})
+	if err != nil {
+		return nil, "", err
+	}
+	return u, activateToken, nil
 }
 
 func (us *Users) Get(id int64) (*User, error) {
@@ -260,9 +264,9 @@ func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error)
 }
 
 type SignInParams struct {
-	Email           string `json:"email"`
-	Username        string `json:"username"`
-	Password        string `json:"password"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 	CustomValidator `json:"-"`
 }
 
@@ -306,7 +310,6 @@ func (us *Users) SignIn(p SignInParams) (*UserWithClaims, error) {
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(p.Password))
 	if err != nil {
-		LogErr(err)
 		return nil, ErrNotAuth
 	}
 	return u, nil
@@ -345,11 +348,11 @@ func (us *Users) isLocked(username string) bool {
 }
 
 type UpdateUserParams struct {
-	Id              *int64  `json:"id"`
-	FirstName       *string `json:"first_name"`
-	LastName        *string `json:"last_name"`
-	Email           *string `json:"email"`
-	Phone           *string `json:"phone"`
+	Id        *int64  `json:"id"`
+	FirstName *string `json:"first_name"`
+	LastName  *string `json:"last_name"`
+	Email     *string `json:"email"`
+	Phone     *string `json:"phone"`
 	CustomValidator `json:"-"`
 }
 
@@ -381,8 +384,8 @@ func (us *Users) Update(p UpdateUserParams) error {
 }
 
 type AssignRoleParams struct {
-	Id              *int64 `json:"id"`
-	Role            *Role  `json:"role"`
+	Id   *int64 `json:"id"`
+	Role *Role  `json:"role"`
 	CustomValidator `json:"-"`
 }
 
@@ -463,7 +466,7 @@ func (us *Users) List(p ListUsersParams) ([]*User, error) {
 }
 
 type ResetPasswordParams struct {
-	Email           string `json:"email"`
+	Email string `json:"email"`
 	CustomValidator `json:"-"`
 }
 

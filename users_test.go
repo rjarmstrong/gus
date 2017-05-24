@@ -150,21 +150,25 @@ func TestUsers_SignIn(t *testing.T) {
 	id := u.Id
 	ErrIf(t, err)
 	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})
+	assert.IsType(t, ErrNotAuth, err)
+	newPass := "asdfj23£$sdfD"
+	err = us.ChangePassword(ChangePasswordParams{Email:cp.Email, ResetToken:tempPassword, NewPassword:newPass})
 	ErrIf(t, err)
-	_, err = us.SignIn(SignInParams{Email: cp.Email, Password: tempPassword})
+	_, err = us.SignIn(SignInParams{Email: cp.Email, Password: newPass})
 	ErrIf(t, err)
 
 	// Suspend
 	err = us.Suspend(id)
 	ErrIf(t, err)
-	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})
+	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: newPass})
 	assert.Error(t, err)
 	err = us.Restore(id)
 	ErrIf(t, err)
-	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})
+	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: newPass})
 	ErrIf(t, err)
+	// TODO: create organisation within this test so we don't have to run whole suite.
 	ErrIf(t, orgsv.Suspend(cp.OrgId))
-	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: tempPassword})
+	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: newPass})
 	assert.Error(t, err)
 }
 
@@ -207,7 +211,7 @@ func TestUsers_PasswordReset(t *testing.T) {
 	// RESET TOKEN EXPIRED
 	token, err = us.ResetPassword(ResetPasswordParams{Email:email})
 	ErrIf(t, err)
-	time.Sleep(time.Millisecond*time.Duration(1500))
+	time.Sleep(time.Millisecond*time.Duration(2000))
 	newP3 := "sdfASDF34&8DFsdf"
 	err = us.ChangePassword(ChangePasswordParams{Email:email, ResetToken:token, NewPassword:newP3})
 	assert.Equal(t, &NotFoundError{}, err)
