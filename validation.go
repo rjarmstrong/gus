@@ -3,12 +3,12 @@ package gus
 import "regexp"
 
 var (
-	Rgx_ValidPasswordChars = regexp.MustCompile(`^[a-z0-9A-Z $&+:=?@#|^*%!-]+$`)
+	Rgx_ValidPasswordChars = regexp.MustCompile("[a-z0-9A-Z\" !#$%&'()*+,\\-.\\/:;<=>?@\\[\\]^_\\`{\\|}~\\\\]+")
 	Rgx_OneLower           = regexp.MustCompile(`[a-z]+`)
 	Rgx_OneUpper           = regexp.MustCompile(`[A-Z]+`)
-	Rgx_OneSpecial         = regexp.MustCompile(`[$&+,:;=?@#|'<>.^*()%!-]+`)
+	Rgx_OneSpecial         = regexp.MustCompile("[\" !#$%&'()*+,\\-.\\/:;<=>?@\\[\\]^_\\`{\\|}~\\\\]+")
 	Rgx_OneNumeric         = regexp.MustCompile(`\d+`)
-	Rgx_PasswordLength     = regexp.MustCompile(`^.{10,30}$`)
+	Rgx_PasswordLength     = regexp.MustCompile(`^.{8,30}$`)
 )
 
 type Validator interface {
