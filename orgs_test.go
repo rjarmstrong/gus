@@ -5,7 +5,10 @@ import (
 	"testing"
 )
 
-var corg = CreateOrgParams{Name: "Trainers Inc."}
+var corg = CreateOrgParams{
+	Name: "Trainers Inc.",
+	Street:"23 Dinbat", Suburb:"Bollbub", Town:"Zingford", Postcode:"ABC23", Country:"Bingaloo",
+}
 
 func TestOrgs_Create(t *testing.T) {
 	u, err := orgsv.Create(corg)
@@ -28,11 +31,13 @@ func TestOrgs_Update(t *testing.T) {
 	u, err := orgsv.Create(corg)
 	ErrIf(t, err)
 	name := "New Name"
-	up := UpdateOrgParams{Id: &u.Id, Name: &name}
+	street := "New Street"
+	up := UpdateOrgParams{Id: &u.Id, Name: &name, Street: &street}
 	err = orgsv.Update(up)
 	ErrIf(t, err)
 	u, _ = orgsv.Get(u.Id)
 	assert.Equal(t, *up.Name, u.Name)
+	assert.Equal(t, *up.Street, u.Street)
 
 	// Should not allow update of non-existing record
 	id := int64(33453453)

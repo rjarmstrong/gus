@@ -17,9 +17,16 @@ func NewOrgs(db *sql.DB) *Orgs {
 }
 
 type Org struct {
-	Id        int64   `json:"id"`
-	Name      string  `json:"name"`
-	Type      OrgType `json:"type"`
+	Id   int64   `json:"id"`
+	Name string  `json:"name"`
+	Type OrgType `json:"type"`
+
+	Street   string  `json:"street"`
+	Suburb   string  `json:"suburb"`
+	Town     string  `json:"town"`
+	Postcode string `json:"postcode"`
+	Country  string  `json:"country"`
+
 	Updated   int64   `json:"updated"`
 	Created   int64   `json:"created"`
 	Suspended bool    `json:"suspended"`
@@ -31,8 +38,15 @@ type Orgs struct {
 }
 
 type CreateOrgParams struct {
-	Name            string  `json:"name"`
-	Type            OrgType `json:"type"`
+	Name string  `json:"name"`
+	Type OrgType `json:"type"`
+
+	Street   string  `json:"street"`
+	Suburb   string  `json:"suburb"`
+	Town     string  `json:"town"`
+	Postcode string `json:"postcode"`
+	Country  string  `json:"country"`
+
 	CustomValidator `json:"-"`
 }
 
@@ -47,12 +61,12 @@ func (va CreateOrgParams) Validate() error {
 }
 
 func (us *Orgs) Create(p CreateOrgParams) (*Org, error) {
-	stmt, err := us.db.Prepare("INSERT INTO orgs(name, type, updated, created, deleted, suspended) values(?,?,?,?,?,?)")
+	stmt, err := us.db.Prepare("INSERT INTO orgs(name, type, street, suburb, town, postcode , country, updated, created, deleted, suspended) values(?,?,?,?,?,?,?,?,?,?,?)")
 	if err != nil {
 		return nil, err
 	}
 	u := &Org{Name: p.Name, Type: p.Type, Created: Milliseconds(time.Now()), Updated: Milliseconds(time.Now())}
-	res, err := stmt.Exec(u.Name, u.Type, u.Updated, u.Created, 0, false)
+	res, err := stmt.Exec(u.Name, u.Type, u.Street, u.Suburb, u.Town, u.Postcode, u.Country, u.Updated, u.Created, 0, false)
 	if err != nil {
 		return nil, err
 	}
@@ -65,14 +79,15 @@ func (us *Orgs) Create(p CreateOrgParams) (*Org, error) {
 }
 
 func (us *Orgs) Get(id int64) (*Org, error) {
-	stmt, err := us.db.Prepare("SELECT id, name, type, created, updated, suspended from orgs WHERE id = ? AND deleted = 0 LIMIT 1")
+	stmt, err := us.db.Prepare("SELECT id, name, type, street, suburb, town, postcode, country, created, updated, suspended from orgs WHERE id = ? AND deleted = 0 LIMIT 1")
 	if err != nil {
 		return nil, err
 	}
 	row := stmt.QueryRow(id)
 	var u Org
 	var suspended int8
-	err = CheckNotFound(row.Scan(&u.Id, &u.Name, &u.Type, &u.Created, &u.Updated, &suspended))
+	err = CheckNotFound(row.Scan(&u.Id, &u.Name, &u.Type, &u.Street, &u.Suburb, &u.Town, &u.Postcode, &u.Country,
+		&u.Created, &u.Updated, &suspended))
 	if err != nil {
 		return nil, err
 	}
@@ -81,8 +96,13 @@ func (us *Orgs) Get(id int64) (*Org, error) {
 }
 
 type UpdateOrgParams struct {
-	Id              *int64  `json:"id"`
-	Name            *string `json:"name"`
+	Id       *int64  `json:"id"`
+	Name     *string `json:"name"`
+	Street   *string  `json:"street"`
+	Suburb   *string  `json:"suburb"`
+	Town     *string  `json:"town"`
+	Postcode *string `json:"postcode"`
+	Country  *string `json:"country"`
 	CustomValidator `json:"-"`
 }
 
@@ -102,11 +122,11 @@ func (us *Orgs) Update(p UpdateOrgParams) error {
 		return err
 	}
 	ApplyUpdates(o, p)
-	stmt, err := us.db.Prepare("UPDATE orgs SET name = ?, updated = ? WHERE id = ? AND deleted = 0")
+	stmt, err := us.db.Prepare("UPDATE orgs SET name = ?, street = ?, suburb = ?, town = ?, postcode = ?, country = ?, updated = ? WHERE id = ? AND deleted = 0")
 	if err != nil {
 		return err
 	}
-	err = CheckUpdated(stmt.Exec(o.Name, Milliseconds(time.Now()), o.Id))
+	err = CheckUpdated(stmt.Exec(o.Name, o.Street, o.Suburb, o.Town, o.Postcode, o.Country, Milliseconds(time.Now()), o.Id))
 	if err != nil {
 		return err
 	}
@@ -126,7 +146,7 @@ func (va *ListOrgsParams) Validate() error {
 }
 
 func (us *Orgs) List(p ListOrgsParams) ([]*Org, error) {
-	q := "SELECT id, name, type, created, updated, suspended from orgs WHERE 1"
+	q := "SELECT id, name, type, street, suburb, town, postcode, country, created, updated, suspended from orgs WHERE 1"
 	if !p.Deleted {
 		q += " AND deleted = 0"
 	}
@@ -138,7 +158,8 @@ func (us *Orgs) List(p ListOrgsParams) ([]*Org, error) {
 	for rows.Next() {
 		u := &Org{}
 		var suspended int
-		rows.Scan(&u.Id, &u.Name, &u.Type, &u.Created, &u.Updated, &suspended)
+		rows.Scan(&u.Id, &u.Name, &u.Type, &u.Street, &u.Suburb, &u.Town, &u.Postcode, &u.Country,
+			&u.Created, &u.Updated, &suspended)
 		u.Suspended = suspended > 0
 		ogs = append(ogs, u)
 	}

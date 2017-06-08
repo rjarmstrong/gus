@@ -43,6 +43,11 @@ DROP TABLE IF EXISTS orgs;
 CREATE TABLE orgs (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(128) NOT NULL,
+    street VARCHAR(512) NULL,
+    suburb VARCHAR(512) NULL,
+    town VARCHAR(512) NULL,
+    postcode VARCHAR(512) NULL,
+    country VARCHAR(512) NULL,
     type INT,
     created BIGINT NULL DEFAULT 0,
     updated BIGINT NULL DEFAULT 0,
