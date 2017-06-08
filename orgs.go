@@ -110,7 +110,7 @@ func (va *UpdateOrgParams) Validate() error {
 	if va.CustomValidator != nil {
 		return va.CustomValidator()
 	}
-	if govalidator.IsNull(*va.Name) {
+	if va.Name != nil && *va.Name == "" {
 		return ErrInvalid("'name' required.")
 	}
 	return nil
