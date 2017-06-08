@@ -20,6 +20,7 @@ func TestOrgs_Create(t *testing.T) {
 	u, err = orgsv.Get(u.Id)
 	ErrIf(t, err)
 	assert.Equal(t, u.Name, corg.Name)
+	assert.Equal(t, u.Suburb, corg.Suburb)
 
 	orgs, err := orgsv.List(ListOrgsParams{})
 	ErrIf(t, err)

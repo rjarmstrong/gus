@@ -65,7 +65,7 @@ func (us *Orgs) Create(p CreateOrgParams) (*Org, error) {
 	if err != nil {
 		return nil, err
 	}
-	u := &Org{Name: p.Name, Type: p.Type, Created: Milliseconds(time.Now()), Updated: Milliseconds(time.Now())}
+	u := &Org{Name: p.Name, Type: p.Type, Street: p.Street, Suburb: p.Suburb, Town: p.Town, Postcode: p.Postcode, Country: p.Country, Created: Milliseconds(time.Now()), Updated: Milliseconds(time.Now())}
 	res, err := stmt.Exec(u.Name, u.Type, u.Street, u.Suburb, u.Town, u.Postcode, u.Country, u.Updated, u.Created, 0, false)
 	if err != nil {
 		return nil, err
