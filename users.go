@@ -430,6 +430,12 @@ type ListUsersParams struct {
 	CustomValidator `json:"-"`
 }
 
+type UserListResponse struct {
+	ListArgs
+	Total int64
+	Items []*User
+}
+
 func (va *ListUsersParams) Validate() error {
 	if va.CustomValidator != nil {
 		return va.CustomValidator()
@@ -437,17 +443,27 @@ func (va *ListUsersParams) Validate() error {
 	return nil
 }
 
-func (us *Users) List(p ListUsersParams) ([]*User, error) {
+func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
 	q := "SELECT id, uid, username, email, first_name, last_name, phone, org_id, created, updated, role, suspended from users WHERE 1"
+	countq := "SELECT count(id) FROM users WHERE 1"
+
 	args := []interface{}{}
 	if !p.Deleted {
 		q += " AND deleted = 0"
+		countq += " AND deleted = 0"
 	}
 	if p.OrgId > 0 {
 		q += " AND org_id = ?"
+		countq += " AND org_id = ?"
 		args = append(args, p.OrgId)
 	}
-	rows, err := GetRows(us.db, q, p.ListArgs, args...)
+	rows, err := GetRows(us.db, q, &p.ListArgs, args...)
+	if err != nil {
+		return nil, err
+	}
+	row := us.db.QueryRow(countq, args...)
+	var total int64
+	err = row.Scan(&total)
 	if err != nil {
 		return nil, err
 	}
@@ -462,7 +478,16 @@ func (us *Users) List(p ListUsersParams) ([]*User, error) {
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	return users, nil
+	return &UserListResponse{
+		Total: total,
+		Items: users,
+		ListArgs: ListArgs{
+			Size:      p.Size,
+			Page:      p.Page,
+			Direction: p.Direction,
+			OrderBy:   p.OrderBy,
+			Deleted:   p.Deleted,
+		}}, nil
 }
 
 type ResetPasswordParams struct {

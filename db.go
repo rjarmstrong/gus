@@ -125,7 +125,7 @@ func ApplyUpdates(original interface{}, updates interface{}) error {
 
 // GetRows returns a *sql.Rows iterator after adding limit and offset, results are sorted by default 'updated' desc.
 // Sql added sample: + ' ORDER by updated DESC LIMIT 20 OFFSET 1'
-func GetRows(db *sql.DB, query string, lp ListArgs, args ...interface{}) (*sql.Rows, error) {
+func GetRows(db *sql.DB, query string, lp *ListArgs, args ...interface{}) (*sql.Rows, error) {
 	lp.ApplyDefaults()
 	if !sqlCheck.MatchString(lp.OrderBy) || !sqlCheck.MatchString(string(lp.Direction)) {
 		return nil, sqlErr

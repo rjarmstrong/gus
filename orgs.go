@@ -21,15 +21,15 @@ type Org struct {
 	Name string  `json:"name"`
 	Type OrgType `json:"type"`
 
-	Street   string  `json:"street"`
-	Suburb   string  `json:"suburb"`
-	Town     string  `json:"town"`
+	Street   string `json:"street"`
+	Suburb   string `json:"suburb"`
+	Town     string `json:"town"`
 	Postcode string `json:"postcode"`
-	Country  string  `json:"country"`
+	Country  string `json:"country"`
 
-	Updated   int64   `json:"updated"`
-	Created   int64   `json:"created"`
-	Suspended bool    `json:"suspended"`
+	Updated   int64 `json:"updated"`
+	Created   int64 `json:"created"`
+	Suspended bool  `json:"suspended"`
 }
 
 type Orgs struct {
@@ -41,11 +41,11 @@ type CreateOrgParams struct {
 	Name string  `json:"name"`
 	Type OrgType `json:"type"`
 
-	Street   string  `json:"street"`
-	Suburb   string  `json:"suburb"`
-	Town     string  `json:"town"`
+	Street   string `json:"street"`
+	Suburb   string `json:"suburb"`
+	Town     string `json:"town"`
 	Postcode string `json:"postcode"`
-	Country  string  `json:"country"`
+	Country  string `json:"country"`
 
 	CustomValidator `json:"-"`
 }
@@ -96,13 +96,13 @@ func (us *Orgs) Get(id int64) (*Org, error) {
 }
 
 type UpdateOrgParams struct {
-	Id       *int64  `json:"id"`
-	Name     *string `json:"name"`
-	Street   *string  `json:"street"`
-	Suburb   *string  `json:"suburb"`
-	Town     *string  `json:"town"`
-	Postcode *string `json:"postcode"`
-	Country  *string `json:"country"`
+	Id              *int64  `json:"id"`
+	Name            *string `json:"name"`
+	Street          *string `json:"street"`
+	Suburb          *string `json:"suburb"`
+	Town            *string `json:"town"`
+	Postcode        *string `json:"postcode"`
+	Country         *string `json:"country"`
 	CustomValidator `json:"-"`
 }
 
@@ -145,12 +145,27 @@ func (va *ListOrgsParams) Validate() error {
 	return nil
 }
 
-func (us *Orgs) List(p ListOrgsParams) ([]*Org, error) {
+type OrgListResponse struct {
+	ListArgs
+	Total int64
+	Items []*Org
+}
+
+func (us *Orgs) List(p ListOrgsParams) (*OrgListResponse, error) {
 	q := "SELECT id, name, type, street, suburb, town, postcode, country, created, updated, suspended from orgs WHERE 1"
+	countq := "SELECT count(id) FROM orgs WHERE 1"
+
 	if !p.Deleted {
 		q += " AND deleted = 0"
+		countq += " AND deleted = 0"
 	}
-	rows, err := GetRows(us.db, q, p.ListArgs)
+	rows, err := GetRows(us.db, q, &p.ListArgs)
+	if err != nil {
+		return nil, err
+	}
+	row := us.db.QueryRow(countq)
+	var total int64
+	err = row.Scan(&total)
 	if err != nil {
 		return nil, err
 	}
@@ -166,5 +181,15 @@ func (us *Orgs) List(p ListOrgsParams) ([]*Org, error) {
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	return ogs, nil
+
+	return &OrgListResponse{
+		Total: total,
+		Items: ogs,
+		ListArgs: ListArgs{
+			Size:      p.Size,
+			Page:      p.Page,
+			Direction: p.Direction,
+			OrderBy:   p.OrderBy,
+			Deleted:   p.Deleted,
+		}}, nil
 }

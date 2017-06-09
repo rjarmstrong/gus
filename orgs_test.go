@@ -6,8 +6,8 @@ import (
 )
 
 var corg = CreateOrgParams{
-	Name: "Trainers Inc.",
-	Street:"23 Dinbat", Suburb:"Bollbub", Town:"Zingford", Postcode:"ABC23", Country:"Bingaloo",
+	Name:   "Trainers Inc.",
+	Street: "23 Dinbat", Suburb: "Bollbub", Town: "Zingford", Postcode: "ABC23", Country: "Bingaloo",
 }
 
 func TestOrgs_Create(t *testing.T) {
@@ -24,8 +24,8 @@ func TestOrgs_Create(t *testing.T) {
 
 	orgs, err := orgsv.List(ListOrgsParams{})
 	ErrIf(t, err)
-	assert.Equal(t, 1, len(orgs))
-	assert.Equal(t, corg.Name, orgs[0].Name)
+	assert.Equal(t, 1, len(orgs.Items))
+	assert.Equal(t, corg.Name, orgs.Items[0].Name)
 }
 
 func TestOrgs_Update(t *testing.T) {

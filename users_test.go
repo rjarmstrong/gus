@@ -27,9 +27,10 @@ func TestUsers_SignUp(t *testing.T) {
 	// List
 	users, err := us.List(ListUsersParams{OrgId: 1})
 	ErrIf(t, err)
-	assert.Equal(t, 1, len(users))
-	assert.Equal(t, int64(1), users[0].Id)
-	assert.Equal(t, cp.Email, users[0].Email)
+	assert.Equal(t, 1, len(users.Items))
+	assert.Equal(t, int64(1), users.Total)
+	assert.Equal(t, int64(1), users.Items[0].Id)
+	assert.Equal(t, cp.Email, users.Items[0].Email)
 
 	i := 5
 	for i > 0 {
@@ -40,28 +41,29 @@ func TestUsers_SignUp(t *testing.T) {
 	users, err = us.List(ListUsersParams{
 		ListArgs: ListArgs{Size: 3},
 	})
-	assert.Equal(t, 3, len(users))
+	assert.Equal(t, 3, len(users.Items))
+	assert.Equal(t, int64(6), users.Total)
 
 	// 2nd Page shorter than size
 	users, err = us.List(ListUsersParams{
 		ListArgs: ListArgs{Size: 4, Page: 1, OrderBy: "id", Direction: DirectionAsc},
 	})
 	ErrIf(t, err)
-	assert.Equal(t, 2, len(users))
+	assert.Equal(t, 2, len(users.Items))
 
 	// Order by id desc
 	users, err = us.List(ListUsersParams{
 		ListArgs: ListArgs{Size: 20, Page: 0, OrderBy: "id", Direction: DirectionDesc},
 	})
 	ErrIf(t, err)
-	assert.Equal(t, int64(6), users[0].Id)
+	assert.Equal(t, int64(6), users.Items[0].Id)
 
 	// Order by id asc
 	users, err = us.List(ListUsersParams{
 		ListArgs: ListArgs{Size: 20, Page: 0, OrderBy: "id", Direction: DirectionAsc},
 	})
 	ErrIf(t, err)
-	assert.Equal(t, int64(1), users[0].Id)
+	assert.Equal(t, int64(1), users.Items[0].Id)
 }
 
 func TestUsers_Update(t *testing.T) {
