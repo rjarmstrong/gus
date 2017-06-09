@@ -134,6 +134,7 @@ func (us *Orgs) Update(p UpdateOrgParams) error {
 }
 
 type ListOrgsParams struct {
+	Name string `json:"name"`
 	ListArgs
 	CustomValidator `json:"-"`
 }
@@ -147,23 +148,30 @@ func (va *ListOrgsParams) Validate() error {
 
 type OrgListResponse struct {
 	ListArgs
-	Total int64
-	Items []*Org
+	Total int64  `json:"total"`
+	Items []*Org `json:"items"`
 }
 
 func (us *Orgs) List(p ListOrgsParams) (*OrgListResponse, error) {
 	q := "SELECT id, name, type, street, suburb, town, postcode, country, created, updated, suspended from orgs WHERE 1"
 	countq := "SELECT count(id) FROM orgs WHERE 1"
 
+	args := []interface{}{}
 	if !p.Deleted {
 		q += " AND deleted = 0"
 		countq += " AND deleted = 0"
 	}
-	rows, err := GetRows(us.db, q, &p.ListArgs)
+	if p.Name != "" {
+		q += " AND name like ?"
+		countq += " AND name like ?"
+		name := "%" + p.Name + "%s"
+		args = append(args, name, name)
+	}
+	rows, err := GetRows(us.db, q, &p.ListArgs, args...)
 	if err != nil {
 		return nil, err
 	}
-	row := us.db.QueryRow(countq)
+	row := us.db.QueryRow(countq, args...)
 	var total int64
 	err = row.Scan(&total)
 	if err != nil {

@@ -425,15 +425,18 @@ func (us *Users) Delete(id int64) error {
 }
 
 type ListUsersParams struct {
-	OrgId int64 `json:"org_id"`
+	OrgId     int64  `json:"org_id"`
+	Role      int64  `json:"role"`
+	Name      string `json:"name"`
+	Suspended bool   `json:"suspended"`
 	ListArgs
 	CustomValidator `json:"-"`
 }
 
 type UserListResponse struct {
 	ListArgs
-	Total int64
-	Items []*User
+	Total int64   `json:"total"`
+	Items []*User `json:"items"`
 }
 
 func (va *ListUsersParams) Validate() error {
@@ -457,6 +460,22 @@ func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
 		countq += " AND org_id = ?"
 		args = append(args, p.OrgId)
 	}
+	if p.Role > 0 {
+		q += " AND role = ?"
+		countq += " AND role = ?"
+		args = append(args, p.Role)
+	}
+	if p.Suspended {
+		q += " AND suspended = 1"
+		countq += " AND suspended = 1"
+		args = append(args, p.Role)
+	}
+	if p.Name != "" {
+		q += " AND first_name like ? AND last_name like ?"
+		countq += " AND first_name like ? AND last_name like ?"
+		name := "%" + p.Name + "%s"
+		args = append(args, name, name)
+	}
 	rows, err := GetRows(us.db, q, &p.ListArgs, args...)
 	if err != nil {
 		return nil, err
@@ -471,7 +490,7 @@ func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
 	for rows.Next() {
 		u := &User{}
 		var suspended int
-		rows.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &u.Created, &u.Updated, &u.Role, suspended)
+		rows.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &u.Created, &u.Updated, &u.Role, &suspended)
 		u.Suspended = suspended > 0
 		users = append(users, u)
 	}
