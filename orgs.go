@@ -164,7 +164,7 @@ func (us *Orgs) List(p ListOrgsParams) (*OrgListResponse, error) {
 	if p.Name != "" {
 		q += " AND name like ?"
 		countq += " AND name like ?"
-		name := "%" + p.Name + "%s"
+		name := "%" + p.Name + "%"
 		args = append(args, name, name)
 	}
 	rows, err := GetRows(us.db, q, &p.ListArgs, args...)

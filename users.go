@@ -428,6 +428,7 @@ type ListUsersParams struct {
 	OrgId     int64  `json:"org_id"`
 	Role      int64  `json:"role"`
 	Name      string `json:"name"`
+	Email     string `json:"email"`
 	Suspended bool   `json:"suspended"`
 	ListArgs
 	CustomValidator `json:"-"`
@@ -471,10 +472,16 @@ func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
 		args = append(args, p.Role)
 	}
 	if p.Name != "" {
-		q += " AND first_name like ? AND last_name like ?"
-		countq += " AND first_name like ? AND last_name like ?"
-		name := "%" + p.Name + "%s"
+		q += " AND (first_name like ? OR last_name like ?)"
+		countq += " AND (first_name like ? OR last_name like ?)"
+		name := "%" + p.Name + "%"
 		args = append(args, name, name)
+	}
+	if p.Email != "" {
+		q += " AND email like ?"
+		countq += " AND email like ?"
+		email := "%" + p.Email + "%"
+		args = append(args, email)
 	}
 	rows, err := GetRows(us.db, q, &p.ListArgs, args...)
 	if err != nil {
