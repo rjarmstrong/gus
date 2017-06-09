@@ -48,6 +48,7 @@ type User struct {
 	LastName  string `json:"last_name"`
 	Phone     string `json:"phone"`
 	OrgId     int64  `json:"org_id"`
+	OrgName   string `json:"org_name"`
 	Updated   int64  `json:"updated"`
 	Created   int64  `json:"created"`
 	Role      Role   `json:"role"`
@@ -425,9 +426,9 @@ func (us *Users) Delete(id int64) error {
 }
 
 type ListUsersParams struct {
-	OrgId     int64  `json:"org_id"`
+	OrgId     int64  `json:"org_id"` // sort by org name
 	Role      int64  `json:"role"`
-	Name      string `json:"name"`
+	Name      string `json:"name"` // first name
 	Email     string `json:"email"`
 	Suspended bool   `json:"suspended"`
 	ListArgs
@@ -448,38 +449,42 @@ func (va *ListUsersParams) Validate() error {
 }
 
 func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
-	q := "SELECT id, uid, username, email, first_name, last_name, phone, org_id, created, updated, role, suspended from users WHERE 1"
-	countq := "SELECT count(id) FROM users WHERE 1"
+	q := "SELECT u.id, u.uid, u.username, u.email, u.first_name, u.last_name, u.phone," +
+		" u.org_id, o.name as org_name, u.created, u.updated, u.role, u.suspended " +
+		"From users u left join orgs o on u.org_id = o.id WHERE 1"
+	countq := "SELECT count(u.id) FROM users u WHERE 1"
 
 	args := []interface{}{}
 	if !p.Deleted {
-		q += " AND deleted = 0"
-		countq += " AND deleted = 0"
+		q += " AND u.deleted = 0"
+		countq += " AND u.deleted = 0"
 	}
 	if p.OrgId > 0 {
-		q += " AND org_id = ?"
-		countq += " AND org_id = ?"
+		q += " AND u.org_id = ?"
+		countq += " AND u.org_id = ?"
 		args = append(args, p.OrgId)
 	}
 	if p.Role > 0 {
-		q += " AND role = ?"
-		countq += " AND role = ?"
+		q += " AND u.role = ?"
+		countq += " AND u.role = ?"
 		args = append(args, p.Role)
 	}
 	if p.Suspended {
-		q += " AND suspended = 1"
-		countq += " AND suspended = 1"
-		args = append(args, p.Role)
+		q += " AND u.suspended = 1"
+		countq += " AND u.suspended = 1"
+	} else {
+		q += " AND u.suspended = 0"
+		countq += " AND u.suspended = 0"
 	}
 	if p.Name != "" {
-		q += " AND (first_name like ? OR last_name like ?)"
-		countq += " AND (first_name like ? OR last_name like ?)"
+		q += " AND (u.first_name like ? OR u.last_name like ?)"
+		countq += " AND (u.first_name like ? OR u.last_name like ?)"
 		name := "%" + p.Name + "%"
 		args = append(args, name, name)
 	}
 	if p.Email != "" {
-		q += " AND email like ?"
-		countq += " AND email like ?"
+		q += " AND u.email like ?"
+		countq += " AND u.email like ?"
 		email := "%" + p.Email + "%"
 		args = append(args, email)
 	}
@@ -497,7 +502,7 @@ func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
 	for rows.Next() {
 		u := &User{}
 		var suspended int
-		rows.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &u.Created, &u.Updated, &u.Role, &suspended)
+		rows.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &u.OrgName, &u.Created, &u.Updated, &u.Role, &suspended)
 		u.Suspended = suspended > 0
 		users = append(users, u)
 	}
