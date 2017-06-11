@@ -28,7 +28,7 @@ Features
 Get started
 ========
 ```bash
-go get github.com/kwk-super-snippets/gus 
+go get github.com/rjarmstrong/gus 
 ```
 
 Set-up database
