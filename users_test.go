@@ -25,7 +25,7 @@ func TestUsers_SignUp(t *testing.T) {
 	assert.Equal(t, u.Email, cp.Email)
 
 	// List
-	users, err := us.List(ListUsersParams{OrgId: 1})
+	users, err := us.List(ListUsersParams{UserFilters: UserFilters{OrgId: 1}})
 	ErrIf(t, err)
 	assert.Equal(t, 1, len(users.Items))
 	assert.Equal(t, int64(1), users.Total)

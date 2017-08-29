@@ -426,13 +426,18 @@ func (us *Users) Delete(id int64) error {
 }
 
 type ListUsersParams struct {
-	OrgId     int64  `json:"org_id"` // sort by org name
-	Role      int64  `json:"role"`
-	Name      string `json:"name"` // first name
-	Email     string `json:"email"`
-	Suspended bool   `json:"suspended"`
 	ListArgs
 	CustomValidator `json:"-"`
+	UserFilters
+}
+
+type UserFilters struct {
+	OrgId     int64  `schema:"org_id"` // sort by org name
+	Role      int64  `schema:"role"`
+	Name      string `schema:"name"` // first name
+	Email     string `schema:"email"`
+	Suspended *bool  `schema:"suspended"`
+	Phone     string `schema:"phone"`
 }
 
 type UserListResponse struct {
@@ -460,33 +465,28 @@ func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
 		countq += " AND u.deleted = 0"
 	}
 	if p.OrgId > 0 {
-		q += " AND u.org_id = ?"
-		countq += " AND u.org_id = ?"
-		args = append(args, p.OrgId)
+		q, countq, args = addClause(q, countq, " AND u.org_id = ?", args, p.OrgId)
 	}
 	if p.Role > 0 {
-		q += " AND u.role = ?"
-		countq += " AND u.role = ?"
-		args = append(args, p.Role)
+		q, countq, args = addClause(q, countq, " AND u.role = ?", args, p.Role)
 	}
-	if p.Suspended {
-		q += " AND u.suspended = 1"
-		countq += " AND u.suspended = 1"
-	} else {
-		q += " AND u.suspended = 0"
-		countq += " AND u.suspended = 0"
+	if p.Suspended != nil {
+		if *p.Suspended {
+			q += " AND u.suspended = 1"
+			countq += " AND m.suspended = 1"
+		} else {
+			q += " AND u.suspended = 0"
+			countq += " AND u.suspended = 0"
+		}
 	}
 	if p.Name != "" {
-		q += " AND (u.first_name like ? OR u.last_name like ?)"
-		countq += " AND (u.first_name like ? OR u.last_name like ?)"
-		name := "%" + p.Name + "%"
-		args = append(args, name, name)
+		q, countq, args = addClause(q, countq, " AND (u.first_name like ? OR u.last_name like ?)", args, "%"+p.Name+"%")
+	}
+	if p.Phone != "" {
+		q, countq, args = addClause(q, countq, " AND u.phone like ?", args, "%"+p.Phone+"%")
 	}
 	if p.Email != "" {
-		q += " AND u.email like ?"
-		countq += " AND u.email like ?"
-		email := "%" + p.Email + "%"
-		args = append(args, email)
+		q, countq, args = addClause(q, countq, " AND u.email like ?", args, "%"+p.Email+"%")
 	}
 	rows, err := GetRows(us.db, q, &p.ListArgs, args...)
 	if err != nil {
@@ -519,6 +519,12 @@ func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
 			OrderBy:   p.OrderBy,
 			Deleted:   p.Deleted,
 		}}, nil
+}
+
+func addClause(sqla string, sqlb string, clause string, params []interface{}, val interface{}) (string, string, []interface{}) {
+	sqla += clause
+	sqlb += clause
+	return sqla, sqlb, append(params, val)
 }
 
 type ResetPasswordParams struct {

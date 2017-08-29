@@ -134,9 +134,18 @@ func (us *Orgs) Update(p UpdateOrgParams) error {
 }
 
 type ListOrgsParams struct {
-	Name string `json:"name"`
 	ListArgs
 	CustomValidator `json:"-"`
+	OrgFilters
+}
+type OrgFilters struct {
+	Name      string `schema:"name"`
+	Type      int64  `schema:"type"`
+	Street    string `schema:"street"` // sort by org name
+	Suburb    string `schema:"suburb"`
+	Town      string `schema:"town"`
+	Postcode  string `schema:"postcode"`
+	Suspended *bool  `schema:"suspended"`
 }
 
 func (va *ListOrgsParams) Validate() error {
@@ -162,11 +171,33 @@ func (us *Orgs) List(p ListOrgsParams) (*OrgListResponse, error) {
 		countq += " AND deleted = 0"
 	}
 	if p.Name != "" {
-		q += " AND name like ?"
-		countq += " AND name like ?"
-		name := "%" + p.Name + "%"
-		args = append(args, name, name)
+		addClause(q, countq, " AND name like ?", args, "%"+p.Name+"%")
 	}
+	if p.Type > 0 {
+		addClause(q, countq, " AND type = ?", args, p.Type)
+	}
+	if p.Street != "" {
+		addClause(q, countq, " AND street like ?", args, "%"+p.Street+"%")
+	}
+	if p.Suburb != "" {
+		addClause(q, countq, " AND suburb like ?", args, "%"+p.Suburb+"%")
+	}
+	if p.Town != "" {
+		addClause(q, countq, " AND town like ?", args, "%"+p.Town+"%")
+	}
+	if p.Postcode != "" {
+		addClause(q, countq, " AND postcode like ?", args, "%"+p.Postcode+"%")
+	}
+	if p.Suspended != nil {
+		if *p.Suspended {
+			q += " AND suspended = 1"
+			countq += " AND suspended = 1"
+		} else {
+			q += " AND suspended = 0"
+			countq += " AND suspended = 0"
+		}
+	}
+
 	rows, err := GetRows(us.db, q, &p.ListArgs, args...)
 	if err != nil {
 		return nil, err
