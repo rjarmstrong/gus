@@ -473,14 +473,15 @@ func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
 	if p.Suspended != nil {
 		if *p.Suspended {
 			q += " AND u.suspended = 1"
-			countq += " AND m.suspended = 1"
+			countq += " AND u.suspended = 1"
 		} else {
 			q += " AND u.suspended = 0"
 			countq += " AND u.suspended = 0"
 		}
 	}
 	if p.Name != "" {
-		q, countq, args = addClause(q, countq, " AND (u.first_name like ? OR u.last_name like ?)", args, "%"+p.Name+"%")
+		q, countq, args = addClause(q, countq, " AND (u.first_name like ?", args, "%"+p.Name+"%")
+		q, countq, args = addClause(q, countq, " OR u.last_name like ?)", args, "%"+p.Name+"%")
 	}
 	if p.Phone != "" {
 		q, countq, args = addClause(q, countq, " AND u.phone like ?", args, "%"+p.Phone+"%")

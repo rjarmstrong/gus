@@ -171,22 +171,22 @@ func (us *Orgs) List(p ListOrgsParams) (*OrgListResponse, error) {
 		countq += " AND deleted = 0"
 	}
 	if p.Name != "" {
-		addClause(q, countq, " AND name like ?", args, "%"+p.Name+"%")
+		q, countq, args = addClause(q, countq, " AND name like ?", args, "%"+p.Name+"%")
 	}
 	if p.Type > 0 {
-		addClause(q, countq, " AND type = ?", args, p.Type)
+		q, countq, args = addClause(q, countq, " AND type = ?", args, p.Type)
 	}
 	if p.Street != "" {
-		addClause(q, countq, " AND street like ?", args, "%"+p.Street+"%")
+		q, countq, args = addClause(q, countq, " AND street like ?", args, "%"+p.Street+"%")
 	}
 	if p.Suburb != "" {
-		addClause(q, countq, " AND suburb like ?", args, "%"+p.Suburb+"%")
+		q, countq, args = addClause(q, countq, " AND suburb like ?", args, "%"+p.Suburb+"%")
 	}
 	if p.Town != "" {
-		addClause(q, countq, " AND town like ?", args, "%"+p.Town+"%")
+		q, countq, args = addClause(q, countq, " AND town like ?", args, "%"+p.Town+"%")
 	}
 	if p.Postcode != "" {
-		addClause(q, countq, " AND postcode like ?", args, "%"+p.Postcode+"%")
+		q, countq, args = addClause(q, countq, " AND postcode like ?", args, "%"+p.Postcode+"%")
 	}
 	if p.Suspended != nil {
 		if *p.Suspended {
