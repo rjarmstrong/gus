@@ -75,6 +75,9 @@ func NewUsers(db *sql.DB, opt UserOpts) *Users {
 	if opt.AuthLockDuration == 0 {
 		opt.AuthLockDuration = 5 * 60
 	}
+	if opt.ResetTokenExpiry == 0 {
+		opt.ResetTokenExpiry = 24*60*60*1000
+	}
 	if opt.PassGen == nil {
 		opt.PassGen = RandStringBytesMaskImprSrc
 	}
