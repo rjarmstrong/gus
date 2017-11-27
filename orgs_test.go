@@ -12,30 +12,30 @@ var corg = CreateOrgParams{
 
 func TestOrgs_Create(t *testing.T) {
 	u, err := orgsv.Create(corg)
-	ErrIf(t, err)
+	assert.Nil(t, err)
 	assert.Equal(t, u.Name, corg.Name)
 	assert.True(t, u.Id > 0)
 
 	// Get
 	u, err = orgsv.Get(u.Id)
-	ErrIf(t, err)
+	assert.Nil(t, err)
 	assert.Equal(t, u.Name, corg.Name)
 	assert.Equal(t, u.Suburb, corg.Suburb)
 
 	orgs, err := orgsv.List(ListOrgsParams{})
-	ErrIf(t, err)
+	assert.Nil(t, err)
 	assert.Equal(t, 1, len(orgs.Items))
 	assert.Equal(t, corg.Name, orgs.Items[0].Name)
 }
 
 func TestOrgs_Update(t *testing.T) {
 	u, err := orgsv.Create(corg)
-	ErrIf(t, err)
+	assert.Nil(t, err)
 	name := "New Name"
 	street := "New Street"
 	up := UpdateOrgParams{Id: &u.Id, Name: &name, Street: &street}
 	err = orgsv.Update(up)
-	ErrIf(t, err)
+	assert.Nil(t, err)
 	u, _ = orgsv.Get(u.Id)
 	assert.Equal(t, *up.Name, u.Name)
 	assert.Equal(t, *up.Street, u.Street)
@@ -49,9 +49,9 @@ func TestOrgs_Update(t *testing.T) {
 
 func TestOrgs_Delete(t *testing.T) {
 	u, err := orgsv.Create(corg)
-	ErrIf(t, err)
+	assert.Nil(t, err)
 	err = orgsv.Delete(u.Id)
-	ErrIf(t, err)
+	assert.Nil(t, err)
 	u, err = orgsv.Get(u.Id)
 	assert.Nil(t, u)
 	assert.Error(t, err)

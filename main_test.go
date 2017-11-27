@@ -3,7 +3,6 @@ package gus
 import (
 	_ "github.com/go-sql-driver/mysql"
 	"os"
-	"runtime/debug"
 	"testing"
 	"fmt"
 )
@@ -22,10 +21,4 @@ func TestMain(m *testing.M) {
 	us = NewUsers(db, UserOpts{AuthAttempts: 5, AuthLockDuration: 1, ResetTokenExpiry: 1 })
 	code := m.Run()
 	os.Exit(code)
-}
-
-func ErrIf(t *testing.T, err error) {
-	if err != nil {
-		t.Fatal(err, string(debug.Stack()))
-	}
 }
