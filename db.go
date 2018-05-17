@@ -132,7 +132,6 @@ func GetRows(db *sql.DB, query string, lp *ListArgs, args ...interface{}) (*sql.
 	}
 	query += fmt.Sprintf(" ORDER BY %s %s LIMIT ? OFFSET ?", lp.OrderBy, lp.Direction)
 	args = append(args, lp.Size, lp.Page*lp.Size)
-	Debug("LIST:", query, args, lp.Direction)
 	stmt, err := db.Prepare(query)
 	if err != nil {
 		if err.Error() == ERR_STRING_NO_SUCH_COLUMN {
@@ -146,4 +145,23 @@ func GetRows(db *sql.DB, query string, lp *ListArgs, args ...interface{}) (*sql.
 		return nil, err
 	}
 	return rows, err
+}
+
+func Tx(db *sql.DB, txFunc func(*sql.Tx) error) (err error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			tx.Rollback()
+			panic(p) // re-throw panic after Rollback
+		} else if err != nil {
+			tx.Rollback()
+		} else {
+			err = tx.Commit()
+		}
+	}()
+	err = txFunc(tx)
+	return err
 }

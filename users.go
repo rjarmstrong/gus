@@ -2,7 +2,6 @@ package gus
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/asaskevich/govalidator"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -15,15 +14,15 @@ const (
 )
 
 var (
-	ErrEmailTaken              error = ErrInvalid("That email is taken.")
-	ErrUsernameTaken           error = ErrInvalid("That username is taken.")
-	ErrEmailInvalid            error = ErrInvalid("'email' invalid.")
-	ErrEmailRequired           error = ErrInvalid("'email' required.")
-	ErrUsernameRequired        error = ErrInvalid("'username' required.")
-	ErrUsernameOrEmailRequired error = ErrInvalid("'username' or 'email' required.")
-	ErrPasswordRequired        error = ErrInvalid("'password' required.")
-	ErrInvalidResetToken       error = ErrInvalid("Invalid reset token.")
-	ErrPasswordInvalid         error = ErrInvalid(
+	ErrEmailTaken              = ErrInvalid("That email is taken.")
+	ErrUsernameTaken           = ErrInvalid("That username is taken.")
+	ErrEmailInvalid            = ErrInvalid("'email' invalid.")
+	ErrEmailRequired           = ErrInvalid("'email' required.")
+	ErrUsernameRequired        = ErrInvalid("'username' required.")
+	ErrUsernameOrEmailRequired = ErrInvalid("'username' or 'email' required.")
+	ErrPasswordRequired        = ErrInvalid("'password' required.")
+	ErrInvalidResetToken       = ErrInvalid("Invalid reset token.")
+	ErrPasswordInvalid         = ErrInvalid(
 		"'new_password' must contain: 1 Upper, 1 Lower, 1 Number, 1 Special and 8 Chars",
 		"OR any alphanumeric with a minimum of 15 chars.")
 )
@@ -76,7 +75,7 @@ func NewUsers(db *sql.DB, opt UserOpts) *Users {
 		opt.AuthLockDuration = 5 * 60
 	}
 	if opt.ResetTokenExpiry == 0 {
-		opt.ResetTokenExpiry = 24*60*60*1000
+		opt.ResetTokenExpiry = 24 * 60 * 60 * 1000
 	}
 	if opt.PassGen == nil {
 		opt.PassGen = RandStringBytesMaskImprSrc
@@ -107,16 +106,16 @@ func hashPassword(password string) (string, error) {
 }
 
 type SignUpParams struct {
-	Username        string `json:"username"`
-	InviteCode      string `json:"invite_code"`
-	Password        string `json:"password"`
-	Email           string `json:"email"`
-	FirstName       string `json:"first_name"`
-	LastName        string `json:"last_name"`
-	Phone           string `json:"phone"`
-	OrgId           int64  `json:"org_id"`
-	Role            Role   `json:"role"`
-	CustomValidator `json:"-"`
+	Username   string `json:"username"`
+	InviteCode string `json:"invite_code"`
+	Password   string `json:"password"`
+	Email      string `json:"email"`
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	Phone      string `json:"phone"`
+	OrgId      int64  `json:"org_id"`
+	Role       Role   `json:"role"`
+	CustomValidator   `json:"-"`
 }
 
 func (va *SignUpParams) Validate() error {
@@ -136,11 +135,19 @@ type ExistsParams struct {
 
 // Exists returns true only if we know for certain that the email and username don't exists, otherwise we assume they might exist or they definitely exists if the error indicates as such.
 func (us *Users) Exists(p ExistsParams) (bool, error) {
-	tx, err := us.db.Begin()
+	var exists bool
+	err := Tx(us.db, func(tx *sql.Tx) error {
+		e, err := us.exists(tx, p)
+		if err != nil {
+			return err
+		}
+		exists = e
+		return nil
+	})
 	if err != nil {
-		return true, err
+		return false, err
 	}
-	return us.exists(tx, p)
+	return exists, nil
 }
 
 func (us *Users) exists(tx *sql.Tx, p ExistsParams) (bool, error) {
@@ -169,64 +176,66 @@ func (us *Users) exists(tx *sql.Tx, p ExistsParams) (bool, error) {
 
 // SignUp returns a user, random password and [error]
 func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
-	tx, err := us.db.Begin()
-	if err != nil {
-		return nil, "", err
-	}
-	exists, err := us.exists(tx, ExistsParams{Username: p.Username, Email: p.Email})
-	if exists {
-		return nil, "", err
-	}
-	stmt, err := tx.Prepare("INSERT INTO users(" +
-		"username, uid, email, first_name, " +
-		"last_name, phone, password_hash, org_id, " +
-		"updated, created, deleted, role, " +
-		"suspended, invite_code) " +
-		"values(" +
-		"?,?,?,?," +
-		"?,?,?,?," +
-		"?,?,?,?," +
-		"?, ?)")
-	if err != nil {
-		return nil, "", err
-	}
-	if *us.UserOpts.UsernameIsEmail || p.Username == "" {
-		p.Username = p.Email
-	}
-	u := &User{
-		Uid: uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
-		LastName: p.LastName, Phone: p.Phone, OrgId: p.OrgId, Created: Milliseconds(time.Now()),
-		Updated: Milliseconds(time.Now()), Role: p.Role, Suspended: false}
 	var givenPassword bool
 	var activateToken = ""
-	if p.Password == "" {
-		p.Password = us.UserOpts.PassGen(128)
-		if err != nil {
-			return nil, "", err
+	var id int64
+	var u *User
+	err := Tx(us.db, func(tx *sql.Tx) error {
+		exists, err := us.exists(tx, ExistsParams{Username: p.Username, Email: p.Email})
+		if exists {
+			return err
 		}
-	} else {
-		givenPassword = true
-	}
-	hash, err := hashPassword(p.Password)
+		stmt, err := tx.Prepare("INSERT INTO users(" +
+			"username, uid, email, first_name, " +
+			"last_name, phone, password_hash, org_id, " +
+			"updated, created, deleted, role, " +
+			"suspended, invite_code) " +
+			"values(" +
+			"?,?,?,?," +
+			"?,?,?,?," +
+			"?,?,?,?," +
+			"?, ?)")
+		if err != nil {
+			return err
+		}
+		if *us.UserOpts.UsernameIsEmail || p.Username == "" {
+			p.Username = p.Email
+		}
+		u = &User{
+			Uid:      uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
+			LastName: p.LastName, Phone: p.Phone, OrgId: p.OrgId, Created: Milliseconds(time.Now()),
+			Updated:  Milliseconds(time.Now()), Role: p.Role, Suspended: false}
+
+		if p.Password == "" {
+			p.Password = us.UserOpts.PassGen(128)
+			if err != nil {
+				return err
+			}
+		} else {
+			givenPassword = true
+		}
+		hash, err := hashPassword(p.Password)
+		if err != nil {
+			return err
+		}
+		res, err := stmt.Exec(
+			u.Username, u.Uid, u.Email, u.FirstName,
+			u.LastName, u.Phone, hash, u.OrgId,
+			u.Updated, u.Created, 0, u.Role,
+			u.Suspended, p.InviteCode)
+		if err != nil {
+			return err
+		}
+		lid, err := res.LastInsertId()
+		if err != nil {
+			return err
+		}
+		id = lid
+		return nil
+	})
 	if err != nil {
-		tx.Rollback()
 		return nil, "", err
 	}
-	res, err := stmt.Exec(
-		u.Username, u.Uid, u.Email, u.FirstName,
-		u.LastName, u.Phone, hash, u.OrgId,
-		u.Updated, u.Created, 0, u.Role,
-		u.Suspended, p.InviteCode)
-	if err != nil {
-		tx.Rollback()
-		return nil, "", err
-	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		tx.Rollback()
-		return nil, "", err
-	}
-	tx.Commit()
 	u.Id = id
 	if givenPassword {
 		return u, "", nil
@@ -268,9 +277,9 @@ func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error)
 }
 
 type SignInParams struct {
-	Email           string `json:"email"`
-	Username        string `json:"username"`
-	Password        string `json:"password"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 	CustomValidator `json:"-"`
 }
 
@@ -307,7 +316,6 @@ func (us *Users) SignIn(p SignInParams) (*UserWithClaims, error) {
 		}
 		return nil, err
 	}
-	Debug(fmt.Sprintf("CLAIMS: %+v", *u.Claims))
 	if u.Suspended || u.OrgSuspended {
 		Debug("FAILED ATTEMPT:", us.isLocked(p.Username))
 		return nil, ErrNotAuth
@@ -347,17 +355,16 @@ func (us *Users) isLocked(username string) bool {
 		// Lock the account regardless
 		return true
 	}
-	Debug("ATTEMPTS:", count, "max:", us.AuthAttempts)
 	return count > us.AuthAttempts
 }
 
 type UpdateUserParams struct {
-	Id              *int64  `json:"id"`
-	FirstName       *string `json:"first_name"`
-	LastName        *string `json:"last_name"`
-	Email           *string `json:"email"`
-	Phone           *string `json:"phone"`
-	CustomValidator `json:"-"`
+	Id        *int64  `json:"id"`
+	FirstName *string `json:"first_name"`
+	LastName  *string `json:"last_name"`
+	Email     *string `json:"email"`
+	Phone     *string `json:"phone"`
+	CustomValidator   `json:"-"`
 }
 
 func (va *UpdateUserParams) Validate() error {
@@ -388,8 +395,8 @@ func (us *Users) Update(p UpdateUserParams) error {
 }
 
 type AssignRoleParams struct {
-	Id              *int64 `json:"id"`
-	Role            *Role  `json:"role"`
+	Id   *int64     `json:"id"`
+	Role *Role      `json:"role"`
 	CustomValidator `json:"-"`
 }
 
@@ -532,7 +539,7 @@ func addClause(sqla string, sqlb string, clause string, params []interface{}, va
 }
 
 type ResetPasswordParams struct {
-	Email           string `json:"email"`
+	Email string    `json:"email"`
 	CustomValidator `json:"-"`
 }
 
@@ -555,25 +562,22 @@ func (us *Users) ResetPassword(p ResetPasswordParams) (string, error) {
 		return "", err
 	}
 	token := us.PassGen(128)
-	tx, err := us.db.Begin()
-	if err != nil {
-		return "", err
-	}
-	_, err = tx.Exec("UPDATE password_resets set deleted = 1 where email = ?", p.Email)
-	if err != nil {
-		return "", err
-	}
-	stmt, err := tx.Prepare("INSERT into password_resets (user_id, email, reset_token, created, deleted) values (?, ?, ?, ?, ?)")
-	if err != nil {
-		return "", err
-	}
-	_, err = stmt.Exec(u.Id, u.Email, token, Milliseconds(time.Now()), 0)
-	if err != nil {
-		err = tx.Rollback()
-		LogErr(err)
-		return "", err
-	}
-	err = tx.Commit()
+	err = Tx(us.db, func(tx *sql.Tx) error {
+		_, err = tx.Exec("UPDATE password_resets set deleted = 1 where email = ?", p.Email)
+		if err != nil {
+			return err
+		}
+		stmt, err := tx.Prepare("INSERT into password_resets (user_id, email, reset_token, created, deleted) values (?, ?, ?, ?, ?)")
+		if err != nil {
+			return err
+		}
+		_, err = stmt.Exec(u.Id, u.Email, token, Milliseconds(time.Now()), 0)
+		if err != nil {
+			LogErr(err)
+			return err
+		}
+		return nil
+	})
 	if err != nil {
 		return "", err
 	}
@@ -585,7 +589,7 @@ type ChangePasswordParams struct {
 	ExistingPassword string `json:"existing_password"`
 	NewPassword      string `json:"new_password"`
 	ResetToken       string `json:"reset_token"`
-	CustomValidator  `json:"-"`
+	CustomValidator         `json:"-"`
 }
 
 func (va *ChangePasswordParams) Validate() error {
@@ -616,40 +620,32 @@ func (us *Users) ChangePassword(p ChangePasswordParams) error {
 		if err != nil {
 			return err
 		}
-	}
-	if p.ResetToken != "" {
-		tx, err := us.db.Begin()
+	} else if p.ResetToken != "" {
+		err := Tx(us.db, func(tx *sql.Tx) error {
+			stmt, err := tx.Prepare(
+				"SELECT reset_token, created FROM password_resets where email = ? and  deleted = 0 " +
+					"ORDER BY created DESC LIMIT 1")
+			row := stmt.QueryRow(p.Email)
+			var resetToken string
+			var created int64
+			err = CheckNotFound(row.Scan(&resetToken, &created))
+			if err != nil {
+				return err
+			}
+			if resetToken != p.ResetToken {
+				return ErrInvalidResetToken
+			}
+			if Milliseconds(time.Now()) > (created + us.ResetTokenExpiry*1000) {
+				return ErrTokenExpired
+			}
+			_, err = tx.Exec("UPDATE password_resets set deleted = 1 WHERE email = ?", p.Email)
+			return err
+		})
 		if err != nil {
 			return err
 		}
-		stmt, err := tx.Prepare(
-			"SELECT reset_token, created FROM password_resets where email = ? and  deleted = 0 " +
-				"ORDER BY created DESC LIMIT 1")
-		row := stmt.QueryRow(p.Email)
-		var resetToken string
-		var created int64
-		err = CheckNotFound(row.Scan(&resetToken, &created))
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
-		if resetToken != p.ResetToken {
-			tx.Rollback()
-			return ErrInvalidResetToken
-		}
-		if Milliseconds(time.Now()) > (created + us.ResetTokenExpiry*1000) {
-			tx.Rollback()
-			return ErrTokenExpired
-		}
-		_, err = tx.Exec("UPDATE password_resets set deleted = 1 WHERE email = ?", p.Email)
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
-		err = tx.Commit()
-		if err != nil {
-			return err
-		}
+	} else {
+		return ErrNotAuth
 	}
 	hash, err := hashPassword(p.NewPassword)
 	if err != nil {

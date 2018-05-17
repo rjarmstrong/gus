@@ -20,7 +20,6 @@ func (su *Suspender) Suspend(id int64) error {
 	if err != nil {
 		return err
 	}
-	Debug("SUSPEND:", id)
 	return CheckUpdated(stmt.Exec(Milliseconds(time.Now()), id))
 }
 

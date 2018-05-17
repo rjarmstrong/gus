@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/rjarmstrong/gus",
-	"GoVersion": "go1.8",
+	"GoVersion": "go1.10",
 	"GodepVersion": "v79",
 	"Packages": [
 		"./..."
