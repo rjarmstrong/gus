@@ -31,6 +31,7 @@ func TestUsers_SignUp(t *testing.T) {
 	assert.Equal(t, int64(1), users.Total)
 	assert.Equal(t, int64(1), users.Items[0].Id)
 	assert.Equal(t, cp.Email, users.Items[0].Email)
+	assert.Equal(t, false, users.Items[0].Passive)
 
 	i := 5
 	for i > 0 {
@@ -64,6 +65,18 @@ func TestUsers_SignUp(t *testing.T) {
 	})
 	assert.Nil(t, err)
 	assert.Equal(t, int64(1), users.Items[0].Id)
+}
+
+func TestUsers_Passive(t *testing.T){
+	cp.Email = "passive@mail.com"
+	cp.Passive = true
+	u, _, err := us.SignUp(cp)
+	assert.Nil(t, err)
+	assert.Equal(t, true, u.Passive)
+
+	_, err = us.SignIn(SignInParams{Email: cp.Email, Password: cp.Password})
+	assert.Equal(t, ErrNotAuth, err)
+	cp.Passive = false
 }
 
 func TestUsers_Update(t *testing.T) {

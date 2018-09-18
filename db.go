@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	ERR_STRING_NO_SUCH_COLUMN         = "sql: no such column"
-	DirectionAsc              SortDir = "ASC"
-	DirectionDesc             SortDir = "DESC"
+	ErrStringNoSuchColumn         = "sql: no such column"
+	DirectionAsc          SortDir = "ASC"
+	DirectionDesc         SortDir = "DESC"
 )
 
 func Milliseconds(t time.Time) int64 {
@@ -134,7 +134,7 @@ func GetRows(db *sql.DB, query string, lp *ListArgs, args ...interface{}) (*sql.
 	args = append(args, lp.Size, lp.Page*lp.Size)
 	stmt, err := db.Prepare(query)
 	if err != nil {
-		if err.Error() == ERR_STRING_NO_SUCH_COLUMN {
+		if err.Error() == ErrStringNoSuchColumn {
 			return nil, ErrInvalid(fmt.Sprintf(err.Error()))
 		}
 		return nil, err

@@ -51,6 +51,7 @@ type User struct {
 	Updated   int64  `json:"updated"`
 	Created   int64  `json:"created"`
 	Role      Role   `json:"role"`
+	Passive   bool   `json:"passive"`
 	Suspended bool   `json:"suspended"`
 }
 
@@ -106,16 +107,17 @@ func hashPassword(password string) (string, error) {
 }
 
 type SignUpParams struct {
-	Username   string `json:"username"`
-	InviteCode string `json:"invite_code"`
-	Password   string `json:"password"`
-	Email      string `json:"email"`
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	Phone      string `json:"phone"`
-	OrgId      int64  `json:"org_id"`
-	Role       Role   `json:"role"`
-	CustomValidator   `json:"-"`
+	Username        string `json:"username"`
+	InviteCode      string `json:"invite_code"`
+	Password        string `json:"password"`
+	Email           string `json:"email"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name"`
+	Phone           string `json:"phone"`
+	OrgId           int64  `json:"org_id"`
+	Role            Role   `json:"role"`
+	Passive         bool   `json:"passive"`
+	CustomValidator `json:"-"`
 }
 
 func (va *SignUpParams) Validate() error {
@@ -189,12 +191,12 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 			"username, uid, email, first_name, " +
 			"last_name, phone, password_hash, org_id, " +
 			"updated, created, deleted, role, " +
-			"suspended, invite_code) " +
+			"suspended, invite_code, passive) " +
 			"values(" +
 			"?,?,?,?," +
 			"?,?,?,?," +
 			"?,?,?,?," +
-			"?, ?)")
+			"?, ?, ?)")
 		if err != nil {
 			return err
 		}
@@ -202,9 +204,9 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 			p.Username = p.Email
 		}
 		u = &User{
-			Uid:      uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
+			Uid: uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
 			LastName: p.LastName, Phone: p.Phone, OrgId: p.OrgId, Created: Milliseconds(time.Now()),
-			Updated:  Milliseconds(time.Now()), Role: p.Role, Suspended: false}
+			Updated: Milliseconds(time.Now()), Role: p.Role, Suspended: false, Passive: p.Passive}
 
 		if p.Password == "" {
 			p.Password = us.UserOpts.PassGen(128)
@@ -222,7 +224,7 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 			u.Username, u.Uid, u.Email, u.FirstName,
 			u.LastName, u.Phone, hash, u.OrgId,
 			u.Updated, u.Created, 0, u.Role,
-			u.Suspended, p.InviteCode)
+			u.Suspended, p.InviteCode, p.Passive)
 		if err != nil {
 			return err
 		}
@@ -248,7 +250,7 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 }
 
 func (us *Users) Get(id int64) (*User, error) {
-	stmt, err := us.db.Prepare("SELECT id, uid, username, email, first_name, last_name, phone, org_id, created, updated, role, suspended from users WHERE id =  ? AND deleted = 0 LIMIT 1")
+	stmt, err := us.db.Prepare("SELECT id, uid, username, email, first_name, last_name, phone, org_id, created, updated, role, suspended, passive from users WHERE id =  ? AND deleted = 0 LIMIT 1")
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +259,7 @@ func (us *Users) Get(id int64) (*User, error) {
 
 // GetByUsername returns a user by username (or email) as well as a password hash.
 func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error) {
-	stmt, err := us.db.Prepare("SELECT u.password_hash, u.id, u.uid, u.username, u.email, u.first_name, u.last_name, u.phone, u.org_id, u.created, u.updated, u.role, u.suspended, COALESCE(o.suspended, 0) from users u left join orgs o on u.org_id = o.id WHERE u.email = ? OR u.username = ? AND u.deleted = 0 LIMIT 1")
+	stmt, err := us.db.Prepare("SELECT u.password_hash, u.id, u.uid, u.username, u.email, u.first_name, u.last_name, u.phone, u.org_id, u.created, u.updated, u.role, u.suspended, COALESCE(o.suspended, 0), passive from users u left join orgs o on u.org_id = o.id WHERE u.email = ? OR u.username = ? AND u.deleted = 0 LIMIT 1")
 	if err != nil {
 		return nil, "", err
 	}
@@ -266,10 +268,14 @@ func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error)
 	var passwordHash string
 	var orgSuspended bool
 	var suspended int
+	var passive sql.NullBool
 	err = CheckNotFound(row.Scan(&passwordHash, &u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone,
-		&u.OrgId, &u.Created, &u.Updated, &u.Role, &suspended, &orgSuspended))
+		&u.OrgId, &u.Created, &u.Updated, &u.Role, &suspended, &orgSuspended, &passive))
 	if err != nil {
 		return nil, "", err
+	}
+	if passive.Valid {
+		u.Passive = passive.Bool
 	}
 	u.Suspended = suspended > 0
 	c := &UserWithClaims{User: &u, Claims: &Claims{OrgId: u.OrgId, Role: u.Role, OrgSuspended: orgSuspended}}
@@ -277,9 +283,9 @@ func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error)
 }
 
 type SignInParams struct {
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Email           string `json:"email"`
+	Username        string `json:"username"`
+	Password        string `json:"password"`
 	CustomValidator `json:"-"`
 }
 
@@ -316,7 +322,7 @@ func (us *Users) SignIn(p SignInParams) (*UserWithClaims, error) {
 		}
 		return nil, err
 	}
-	if u.Suspended || u.OrgSuspended {
+	if u.Suspended || u.OrgSuspended || u.Passive {
 		Debug("FAILED ATTEMPT:", us.isLocked(p.Username))
 		return nil, ErrNotAuth
 	}
@@ -359,12 +365,12 @@ func (us *Users) isLocked(username string) bool {
 }
 
 type UpdateUserParams struct {
-	Id        *int64  `json:"id"`
-	FirstName *string `json:"first_name"`
-	LastName  *string `json:"last_name"`
-	Email     *string `json:"email"`
-	Phone     *string `json:"phone"`
-	CustomValidator   `json:"-"`
+	Id              *int64  `json:"id"`
+	FirstName       *string `json:"first_name"`
+	LastName        *string `json:"last_name"`
+	Email           *string `json:"email"`
+	Phone           *string `json:"phone"`
+	CustomValidator `json:"-"`
 }
 
 func (va *UpdateUserParams) Validate() error {
@@ -395,8 +401,8 @@ func (us *Users) Update(p UpdateUserParams) error {
 }
 
 type AssignRoleParams struct {
-	Id   *int64     `json:"id"`
-	Role *Role      `json:"role"`
+	Id              *int64 `json:"id"`
+	Role            *Role  `json:"role"`
 	CustomValidator `json:"-"`
 }
 
@@ -414,6 +420,9 @@ func (us *Users) AssignRole(p AssignRoleParams) error {
 	u, err := us.Get(*p.Id)
 	if err != nil {
 		return err
+	}
+	if u.Passive {
+		return ErrInvalid("This user is passive, cannot assign a role")
 	}
 	stmt, err := us.db.Prepare("UPDATE users SET role = ?, updated = ? WHERE id = ? AND deleted = 0")
 	if err != nil {
@@ -465,7 +474,7 @@ func (va *ListUsersParams) Validate() error {
 
 func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
 	q := "SELECT u.id, u.uid, u.username, u.email, u.first_name, u.last_name, u.phone," +
-		" u.org_id, o.name as org_name, u.created, u.updated, u.role, u.suspended " +
+		" u.org_id, o.name as org_name, u.created, u.updated, u.role, u.suspended, u.passive " +
 		"From users u left join orgs o on u.org_id = o.id WHERE 1"
 	countq := "SELECT count(u.id) FROM users u WHERE 1"
 
@@ -513,8 +522,12 @@ func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
 	for rows.Next() {
 		u := &User{}
 		var suspended int
-		rows.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &u.OrgName, &u.Created, &u.Updated, &u.Role, &suspended)
+		var passive sql.NullBool
+		rows.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &u.OrgName, &u.Created, &u.Updated, &u.Role, &suspended, &passive)
 		u.Suspended = suspended > 0
+		if passive.Valid {
+			u.Passive = passive.Bool
+		}
 		users = append(users, u)
 	}
 	if err = rows.Err(); err != nil {
@@ -539,7 +552,7 @@ func addClause(sqla string, sqlb string, clause string, params []interface{}, va
 }
 
 type ResetPasswordParams struct {
-	Email string    `json:"email"`
+	Email           string `json:"email"`
 	CustomValidator `json:"-"`
 }
 
@@ -589,7 +602,7 @@ type ChangePasswordParams struct {
 	ExistingPassword string `json:"existing_password"`
 	NewPassword      string `json:"new_password"`
 	ResetToken       string `json:"reset_token"`
-	CustomValidator         `json:"-"`
+	CustomValidator  `json:"-"`
 }
 
 func (va *ChangePasswordParams) Validate() error {
@@ -663,9 +676,13 @@ func (us *Users) ChangePassword(p ChangePasswordParams) error {
 func scanUser(row *sql.Row) (*User, error) {
 	var u User
 	var suspended int
+	var passive sql.NullBool
 	err := row.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId,
-		&u.Created, &u.Updated, &u.Role, &suspended)
+		&u.Created, &u.Updated, &u.Role, &suspended, &passive)
 	u.Suspended = suspended > 0
+	if passive.Valid {
+		u.Passive = passive.Bool
+	}
 	return CheckRows(&u, err)
 }
 
