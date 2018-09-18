@@ -9,10 +9,6 @@ import (
 	"time"
 )
 
-const (
-	ERR_STRING_EMAIL_CONSTRAINT string = "UNIQUE constraint failed: users.email"
-)
-
 var (
 	ErrEmailTaken              = ErrInvalid("That email is taken.")
 	ErrUsernameTaken           = ErrInvalid("That username is taken.")
@@ -242,9 +238,13 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 	if givenPassword {
 		return u, "", nil
 	}
-	activateToken, err = us.ResetPassword(ResetPasswordParams{Email: p.Email})
-	if err != nil {
-		return nil, "", err
+
+	if !u.Passive {
+		at, err := us.ResetPassword(ResetPasswordParams{Email: p.Email})
+		if err != nil {
+			return nil, "", err
+		}
+		activateToken = at
 	}
 	return u, activateToken, nil
 }
@@ -573,6 +573,9 @@ func (us *Users) ResetPassword(p ResetPasswordParams) (string, error) {
 	u, _, err := us.GetByUsername(p.Email)
 	if err != nil {
 		return "", err
+	}
+	if u.Passive {
+		return "", ErrNotAuth
 	}
 	token := us.PassGen(128)
 	err = Tx(us.db, func(tx *sql.Tx) error {

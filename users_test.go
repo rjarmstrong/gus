@@ -77,6 +77,10 @@ func TestUsers_Passive(t *testing.T){
 	_, err = us.SignIn(SignInParams{Email: cp.Email, Password: cp.Password})
 	assert.Equal(t, ErrNotAuth, err)
 	cp.Passive = false
+
+	token, err := us.ResetPassword(ResetPasswordParams{Email:cp.Email})
+	assert.Equal(t, "", token)
+	assert.Equal(t, ErrNotAuth, err)
 }
 
 func TestUsers_Update(t *testing.T) {
