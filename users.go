@@ -178,6 +178,9 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 	var activateToken = ""
 	var id int64
 	var u *User
+	if p.Passive && p.Email == "" {
+		p.Email = uuid.NewV4().String() + "@passive-user.gus"
+	}
 	err := Tx(us.db, func(tx *sql.Tx) error {
 		exists, err := us.exists(tx, ExistsParams{Username: p.Username, Email: p.Email})
 		if exists {
@@ -388,7 +391,7 @@ func (us *Users) Update(p UpdateUserParams) error {
 	if err != nil {
 		return err
 	}
-	ApplyUpdates(u, p)
+	_ = ApplyUpdates(u, p)
 	stmt, err := us.db.Prepare("UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ?, updated = ? WHERE id = ? AND deleted = 0")
 	if err != nil {
 		return err

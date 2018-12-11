@@ -68,6 +68,7 @@ func TestUsers_SignUp(t *testing.T) {
 }
 
 func TestUsers_Passive(t *testing.T){
+	t.Log("with email")
 	cp.Email = "passive@mail.com"
 	cp.Passive = true
 	u, _, err := us.SignUp(cp)
@@ -81,7 +82,28 @@ func TestUsers_Passive(t *testing.T){
 	token, err := us.ResetPassword(ResetPasswordParams{Email:cp.Email})
 	assert.Equal(t, "", token)
 	assert.Equal(t, ErrNotAuth, err)
+
+
+	t.Log("without email")
+	cp.FirstName = "First"
+	cp.Email = ""
+	cp.Passive = true
+	u, _, err = us.SignUp(cp)
+	assert.Nil(t, err)
+	assert.Equal(t, true, u.Passive)
+
+	t.Log("duplicate without email")
+	cp.FirstName = "Second"
+	cp.Email = ""
+	cp.Passive = true
+	u, _, err = us.SignUp(cp)
+	assert.Nil(t, err)
+	assert.Equal(t, true, u.Passive)
+	// reset passive
+	cp.Passive = false
 }
+
+
 
 func TestUsers_Update(t *testing.T) {
 	cp.Email = "update@mail.com"

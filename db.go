@@ -119,7 +119,7 @@ func ApplyUpdates(original interface{}, updates interface{}) error {
 	if err != nil {
 		return err
 	}
-	json.Unmarshal(p, original)
+	_ = json.Unmarshal(p, original)
 	return nil
 }
 
