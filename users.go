@@ -524,12 +524,17 @@ func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
 	users := []*User{}
 	for rows.Next() {
 		u := &User{}
-		var suspended int
+		var orgName sql.NullString
 		var passive sql.NullBool
-		rows.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &u.OrgName, &u.Created, &u.Updated, &u.Role, &suspended, &passive)
-		u.Suspended = suspended > 0
+		err2 := rows.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &orgName, &u.Created, &u.Updated, &u.Role, &u.Suspended, &passive)
+		if err2 != nil {
+			return nil, err
+		}
 		if passive.Valid {
 			u.Passive = passive.Bool
+		}
+		if orgName.Valid {
+			u.OrgName = orgName.String
 		}
 		users = append(users, u)
 	}

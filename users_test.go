@@ -206,6 +206,16 @@ func TestUsers_SignIn(t *testing.T) {
 	sususer, err := us.Get(id)
 	assert.Nil(t, err)
 	assert.Equal(t, true, sususer.Suspended)
+
+	trrue := true
+	users, err := us.List(ListUsersParams{UserFilters: UserFilters{Suspended:&trrue}})
+	assert.Nil(t, err)
+	for _, v := range users.Items {
+		if v.Username == cp.Email {
+			assert.True(t, v.Suspended)
+		}
+	}
+
 	err = us.Restore(id)
 	assert.Nil(t, err)
 	_, err = us.SignIn(SignInParams{Username: cp.Email, Password: newPass})
