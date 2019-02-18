@@ -23,6 +23,7 @@ func TestUsers_SignUp(t *testing.T) {
 	u, err = us.Get(u.Id)
 	assert.Nil(t, err)
 	assert.Equal(t, u.Email, cp.Email)
+	assert.Equal(t, false, u.Activated)
 
 	// List
 	users, err := us.List(ListUsersParams{UserFilters: UserFilters{OrgId: 1}})
@@ -249,10 +250,16 @@ func TestUsers_PasswordReset(t *testing.T) {
 	assert.Nil(t, err)
 	newP := "newPassword1!"
 	err = us.ChangePassword(ChangePasswordParams{Email: email, ExistingPassword: password, NewPassword: newP})
+
+	u, err = us.Get(u.Id)
+	assert.Nil(t, err)
+	assert.Equal(t, true, u.Activated)
+
 	assert.Nil(t, err)
 	uc, err := us.SignIn(SignInParams{Username: u.Email, Password: newP})
 	assert.Nil(t, err)
 	assert.Equal(t, email, uc.Email)
+
 
 	// RESET TOKEN
 	token, err := us.ResetPassword(ResetPasswordParams{Email: email})

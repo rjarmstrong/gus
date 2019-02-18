@@ -20,6 +20,7 @@ CREATE TABLE users (
     deleted tinyint(4),
     role BIGINT,
 	passive TINYINT(2) NULL,
+	activated TINYINT(2) NULL,
     CONSTRAINT UC_Email UNIQUE (email),
     CONSTRAINT UC_Username UNIQUE (username)
 );

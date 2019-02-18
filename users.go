@@ -3,6 +3,7 @@ package gus
 import (
 	"database/sql"
 	"github.com/asaskevich/govalidator"
+	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 	"strings"
@@ -47,6 +48,7 @@ type User struct {
 	Updated   int64  `json:"updated"`
 	Created   int64  `json:"created"`
 	Role      Role   `json:"role"`
+	Activated bool   `json:"activated"`
 	Passive   bool   `json:"passive"`
 	Suspended bool   `json:"suspended"`
 }
@@ -190,14 +192,14 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 			"username, uid, email, first_name, " +
 			"last_name, phone, password_hash, org_id, " +
 			"updated, created, deleted, role, " +
-			"suspended, invite_code, passive) " +
+			"suspended, invite_code, passive, activated) " +
 			"values(" +
 			"?,?,?,?," +
 			"?,?,?,?," +
 			"?,?,?,?," +
-			"?, ?, ?)")
+			"?, ?, ?, ?)")
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		if *us.UserOpts.UsernameIsEmail || p.Username == "" {
 			p.Username = p.Email
@@ -205,7 +207,7 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 		u = &User{
 			Uid: uuid.NewV4().String(), Username: p.Username, Email: p.Email, FirstName: p.FirstName,
 			LastName: p.LastName, Phone: p.Phone, OrgId: p.OrgId, Created: Milliseconds(time.Now()),
-			Updated: Milliseconds(time.Now()), Role: p.Role, Suspended: false, Passive: p.Passive}
+			Updated: Milliseconds(time.Now()), Role: p.Role, Suspended: false, Passive: p.Passive, Activated:false}
 
 		if p.Password == "" {
 			p.Password = us.UserOpts.PassGen(128)
@@ -223,7 +225,7 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 			u.Username, u.Uid, u.Email, u.FirstName,
 			u.LastName, u.Phone, hash, u.OrgId,
 			u.Updated, u.Created, 0, u.Role,
-			u.Suspended, p.InviteCode, p.Passive)
+			u.Suspended, p.InviteCode, p.Passive, false)
 		if err != nil {
 			return err
 		}
@@ -253,7 +255,7 @@ func (us *Users) SignUp(p SignUpParams) (*User, string, error) {
 }
 
 func (us *Users) Get(id int64) (*User, error) {
-	stmt, err := us.db.Prepare("SELECT id, uid, username, email, first_name, last_name, phone, org_id, created, updated, role, suspended, passive from users WHERE id =  ? AND deleted = 0 LIMIT 1")
+	stmt, err := us.db.Prepare("SELECT id, uid, username, email, first_name, last_name, phone, org_id, created, updated, role, suspended, passive, activated from users WHERE id =  ? AND deleted = 0 LIMIT 1")
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +264,7 @@ func (us *Users) Get(id int64) (*User, error) {
 
 // GetByUsername returns a user by username (or email) as well as a password hash.
 func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error) {
-	stmt, err := us.db.Prepare("SELECT u.password_hash, u.id, u.uid, u.username, u.email, u.first_name, u.last_name, u.phone, u.org_id, u.created, u.updated, u.role, u.suspended, COALESCE(o.suspended, 0), passive from users u left join orgs o on u.org_id = o.id WHERE u.email = ? OR u.username = ? AND u.deleted = 0 LIMIT 1")
+	stmt, err := us.db.Prepare("SELECT u.password_hash, u.id, u.uid, u.username, u.email, u.first_name, u.last_name, u.phone, u.org_id, u.created, u.updated, u.role, u.suspended, COALESCE(o.suspended, 0), passive, activated from users u left join orgs o on u.org_id = o.id WHERE u.email = ? OR u.username = ? AND u.deleted = 0 LIMIT 1")
 	if err != nil {
 		return nil, "", err
 	}
@@ -271,14 +273,17 @@ func (us *Users) GetByUsername(username string) (*UserWithClaims, string, error)
 	var passwordHash string
 	var orgSuspended bool
 	var suspended int
-	var passive sql.NullBool
+	var passive, activated sql.NullBool
 	err = CheckNotFound(row.Scan(&passwordHash, &u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone,
-		&u.OrgId, &u.Created, &u.Updated, &u.Role, &suspended, &orgSuspended, &passive))
+		&u.OrgId, &u.Created, &u.Updated, &u.Role, &suspended, &orgSuspended, &passive, &activated))
 	if err != nil {
 		return nil, "", err
 	}
 	if passive.Valid {
 		u.Passive = passive.Bool
+	}
+	if activated.Valid {
+		u.Activated = activated.Bool
 	}
 	u.Suspended = suspended > 0
 	c := &UserWithClaims{User: &u, Claims: &Claims{OrgId: u.OrgId, Role: u.Role, OrgSuspended: orgSuspended}}
@@ -477,7 +482,7 @@ func (va *ListUsersParams) Validate() error {
 
 func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
 	q := "SELECT u.id, u.uid, u.username, u.email, u.first_name, u.last_name, u.phone," +
-		" u.org_id, o.name as org_name, u.created, u.updated, u.role, u.suspended, u.passive " +
+		" u.org_id, o.name as org_name, u.created, u.updated, u.role, u.suspended, u.passive, u.activated " +
 		"From users u left join orgs o on u.org_id = o.id WHERE 1"
 	countq := "SELECT count(u.id) FROM users u WHERE 1"
 
@@ -525,13 +530,16 @@ func (us *Users) List(p ListUsersParams) (*UserListResponse, error) {
 	for rows.Next() {
 		u := &User{}
 		var orgName sql.NullString
-		var passive sql.NullBool
-		err2 := rows.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &orgName, &u.Created, &u.Updated, &u.Role, &u.Suspended, &passive)
+		var passive, activated sql.NullBool
+		err2 := rows.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId, &orgName, &u.Created, &u.Updated, &u.Role, &u.Suspended, &passive, &activated)
 		if err2 != nil {
 			return nil, err
 		}
 		if passive.Valid {
 			u.Passive = passive.Bool
+		}
+		if activated.Valid {
+			u.Activated = activated.Bool
 		}
 		if orgName.Valid {
 			u.OrgName = orgName.String
@@ -675,7 +683,7 @@ func (us *Users) ChangePassword(p ChangePasswordParams) error {
 	if err != nil {
 		return err
 	}
-	stmt, err := us.db.Prepare("UPDATE users SET password_hash = ?, updated = ? WHERE email = ? AND deleted = 0")
+	stmt, err := us.db.Prepare("UPDATE users SET activated = 1, password_hash = ?, updated = ? WHERE email = ? AND deleted = 0")
 	err = CheckNotFound(err)
 	if err != nil {
 		return err
@@ -687,12 +695,15 @@ func (us *Users) ChangePassword(p ChangePasswordParams) error {
 func scanUser(row *sql.Row) (*User, error) {
 	var u User
 	var suspended int
-	var passive sql.NullBool
+	var passive, activated sql.NullBool
 	err := row.Scan(&u.Id, &u.Uid, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Phone, &u.OrgId,
-		&u.Created, &u.Updated, &u.Role, &suspended, &passive)
+		&u.Created, &u.Updated, &u.Role, &suspended, &passive, &activated)
 	u.Suspended = suspended > 0
 	if passive.Valid {
 		u.Passive = passive.Bool
+	}
+	if activated.Valid {
+		u.Activated = activated.Bool
 	}
 	return CheckRows(&u, err)
 }
