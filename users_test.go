@@ -120,6 +120,8 @@ func TestUsers_Update(t *testing.T) {
 	assert.Equal(t, *up.Email, u.Email)
 	assert.Equal(t, *up.FirstName, u.FirstName)
 	assert.Equal(t, *up.Phone, u.Phone)
+	
+	assert.Equal(t, *up.Email, u.Username)
 	// untouched
 	assert.Equal(t, cp.LastName, u.LastName)
 

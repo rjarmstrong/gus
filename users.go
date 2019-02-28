@@ -397,11 +397,14 @@ func (us *Users) Update(p UpdateUserParams) error {
 		return err
 	}
 	_ = ApplyUpdates(u, p)
-	stmt, err := us.db.Prepare("UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ?, updated = ? WHERE id = ? AND deleted = 0")
+	if p.Email != nil && us.UsernameIsEmail != nil && *us.UsernameIsEmail {
+		u.Username = *p.Email
+	}
+	stmt, err := us.db.Prepare("UPDATE users SET first_name = ?, last_name = ?, email = ?, username = ?, phone = ?, updated = ? WHERE id = ? AND deleted = 0")
 	if err != nil {
 		return err
 	}
-	err = CheckUpdated(stmt.Exec(u.FirstName, u.LastName, u.Email, u.Phone, Milliseconds(time.Now()), u.Id))
+	err = CheckUpdated(stmt.Exec(u.FirstName, u.LastName, u.Email, u.Username, u.Phone, Milliseconds(time.Now()), u.Id))
 	if err != nil && strings.Contains(err.Error(), "Duplicate entry") { // ERR_STRING_EMAIL_CONSTRAINT) {
 		return ErrEmailTaken
 	}
